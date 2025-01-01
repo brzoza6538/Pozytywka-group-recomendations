@@ -1,7 +1,7 @@
 from flask import Flask
 import os
 import json
-from models import db, User, Artist, Session, Track, Recomendation
+from models import db, User, Artist, Session, Track, Recommendation
 from data_routes import data_blueprint
 from model.model_routes import model_blueprint
 
@@ -38,7 +38,7 @@ def create_app():
         app.register_blueprint(model_blueprint)
 
         db.create_all()
-        # db.session.query(Recomendation).delete()
+        # db.session.query(Recommendation).delete()
 
         if Artist.query.count() == 0:
             load_data_from_jsonl("data/artists.jsonl", Artist)

@@ -8,7 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Kopiowanie aplikacji
 COPY . .
 
-RUN gunzip data/*.gz
+RUN gunzip -k data/*.gz
 
 
 # Uruchamianie aplikacji

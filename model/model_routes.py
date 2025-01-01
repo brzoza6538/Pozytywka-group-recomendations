@@ -1,15 +1,31 @@
-from flask import Blueprint, jsonify, request
-from models import Recomendation, Artist, User, Track, Session, db
+from flask import Blueprint, jsonify, request, render_template
+from models import Recommendation, Artist, User, Track, Session, db
 
-model_blueprint = Blueprint("reccomend", __name__)
+model_blueprint = Blueprint("recommendation", __name__)
 
 
-def get_recomendations_by_playlist_id(playlist_id):
-    reccomendations = Recomendation.query.filter(Recomendation.playlist_id == playlist_id).all()
-    return reccomendations
+def get_recommendations_by_playlist_id(playlist_id):
+    reccommendations = Recommendation.query.filter(Recommendation.playlist_id == playlist_id).all()
+    return reccommendations
 
-@model_blueprint.route("/reccomend", methods=["POST"])
-def create_recomendation():
+@model_blueprint.route('/')
+def index():
+    return render_template('index.html')
+
+@model_blueprint.route("/recommend/<playlist_id>", methods=["GET"])
+def get_recommendation(playlist_id):
+    recommendations = (
+        Recommendation.query
+        .filter(Recommendation.playlist_id == playlist_id)
+        .order_by(Recommendation.id.desc()) 
+        .limit(5)
+        .all()
+    )
+
+    return jsonify([recommendation.to_dict() for recommendation in recommendations])
+
+@model_blueprint.route("/recommend", methods=["POST"])
+def create_recommendation():
     users_id = []
 
     data = request.get_json()
@@ -18,13 +34,14 @@ def create_recomendation():
 
 
 
-#MOCK
+#MOCK 
     # for i in range(10):
     #     for j in range(i):
-    #         new_recomendation = Recomendation(playlist_id=i, track_id=j)
-    #         db.session.add(new_recomendation)
+    #         new_recommendation = Recommendation(playlist_id=i, track_id=j)
+    #         db.session.add(new_recommendation)
     #         db.session.commit()
 
-    check = get_recomendations_by_playlist_id(7)[-5:] # szukamy ostatnich pięciu z playlisty dla zaawansowanej budowy
 
-    return jsonify([x.to_dict() for x in check]), 201
+    playlist_id = 7
+
+    return str(playlist_id), 201

@@ -146,7 +146,7 @@ class Session(db.Model):
 
 
 
-class Recomendation(db.Model):
+class Recommendation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     playlist_id = db.Column(db.String(22), nullable=False)
     track_id = db.Column(db.String(22), nullable=False)
@@ -160,7 +160,7 @@ class Recomendation(db.Model):
 
     def to_dict(self):
         return {
-            "recomendation_id": self.id,
+            "recommendation_id": self.id,
             "playlist_id": self.playlist_id,
             "track_id": self.track_id,
             "reaction": self.reaction

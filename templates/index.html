@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recommendation Form</title>
+</head>
+<body>
+    <h1>Recommendation Form</h1>
+    <form id="recommendation-form">
+        <label for="recommendation">Enter your recommendation:</label>
+        <input type="text" id="recommendation" name="recommendation" required>
+        <button type="submit">Submit</button>
+    </form>
+
+    <div id="response-message"></div>
+    <div id="recommendations-output"></div>
+
+    <script>
+        document.getElementById("recommendation-form").addEventListener("submit", async function(event) {
+            event.preventDefault(); // Prevent default form submission
+    
+            const recommendationString = document.getElementById("recommendation").value;
+    
+            try {
+                // Parse the recommendation string to JSON
+                const recommendationData = JSON.parse(recommendationString);
+    
+                // Send POST request to /recommend
+                const postResponse = await fetch('/recommend', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(recommendationData),
+                });
+    
+                if (!postResponse.ok) {
+                    throw new Error("Failed to create recommendation.");
+                }
+    
+                // Parse the playlist_id from the response (text response)
+                const playlist_id = await postResponse.text();
+    
+                // Fetch recommendations using the playlist_id
+                const getResponse = await fetch(`/recommend/${playlist_id}`);
+                if (!getResponse.ok) {
+                    throw new Error("Failed to fetch recommendations.");
+                }
+    
+                const recommendations = await getResponse.json();
+    
+                // Display recommendations on the page
+                const outputDiv = document.getElementById("recommendations-output");
+                outputDiv.innerHTML = `
+                    <h2>Recommendations:</h2>
+                    <ul>
+                        ${recommendations.map(r => `<li>${JSON.stringify(r)}</li>`).join('')}
+                    </ul>
+                `;
+            } catch (error) {
+                document.getElementById("response-message").textContent = `Error: ${error.message}`;
+            }
+        });
+    </script>
+    
+</body>
+</html>
