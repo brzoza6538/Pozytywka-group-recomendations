@@ -125,7 +125,7 @@ class Session(db.Model):
     timestamp = db.Column(db.String(19), nullable=False) # no nanoseconds
     user_id = db.Column(db.Integer, nullable=False)
     track_id = db.Column(db.String(22), nullable=True)
-    event_type = db.Column(db.String(4), nullable=False) #skip, play, like
+    event_type = db.Column(db.String(20), nullable=False) #skip, play, like, advertisment
 
     def __init__(self, data):
         self.session_id = data["session_id"]
@@ -150,7 +150,7 @@ class Recommendation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     playlist_id = db.Column(db.String(22), nullable=False)
     track_id = db.Column(db.String(22), nullable=False)
-    reaction = db.Column(db.String(4), nullable=True) #skip, play, like, null (not yet given)
+    reaction = db.Column(db.Boolean, nullable=True) #skiped, not skipped, not yet decided
 
 
     def __init__(self, playlist_id, track_id):

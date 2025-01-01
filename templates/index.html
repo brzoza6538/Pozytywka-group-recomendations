@@ -50,13 +50,19 @@
     
                 const recommendations = await getResponse.json();
     
-                // Display recommendations on the page
+                // Display recommendations with checkboxes
                 const outputDiv = document.getElementById("recommendations-output");
                 outputDiv.innerHTML = `
                     <h2>Recommendations:</h2>
-                    <ul>
-                        ${recommendations.map(r => `<li>${JSON.stringify(r)}</li>`).join('')}
-                    </ul>
+                    <form id="recommendations-list">
+                        ${recommendations.map((r, index) => `
+                            <div>
+                                <input type="checkbox" id="rec-${index}" name="recommendation" value="${r.id}">
+                                <label for="rec-${index}">${JSON.stringify(r)}</label>
+                            </div>
+                        `).join('')}
+                        <button type="submit">Submit Selected Recommendations</button>
+                    </form>
                 `;
             } catch (error) {
                 document.getElementById("response-message").textContent = `Error: ${error.message}`;
