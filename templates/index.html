@@ -17,6 +17,8 @@
     <div id="recommendations-output"></div>
 
     <script>
+        let playlist_id = null;  // Variable to hold the playlist_id
+
         document.getElementById("recommendation-form").addEventListener("submit", async function(event) {
             event.preventDefault(); // Prevent default form submission
     
@@ -40,7 +42,7 @@
                 }
     
                 // Parse the playlist_id from the response (text response)
-                const playlist_id = await postResponse.text();
+                playlist_id = await postResponse.text();
     
                 // Fetch recommendations using the playlist_id
                 const getResponse = await fetch(`/recommend/${playlist_id}`);
@@ -61,14 +63,74 @@
                                 <label for="rec-${index}">${JSON.stringify(r)}</label>
                             </div>
                         `).join('')}
-                        <button type="submit">Submit Selected Recommendations</button>
+                        <button type="button" id="submit-selected">Submit Selected Recommendations</button>
                     </form>
                 `;
+    
+                // Add event listener for the submit button
+                document.getElementById("submit-selected").addEventListener("click", async function() {
+                    const selectedRecommendations = [];
+                    const checkboxes = document.querySelectorAll('#recommendations-list input[type="checkbox"]');
+    
+                    checkboxes.forEach(checkbox => {
+                        // Get the recommendation_id and whether it's checked
+                        selectedRecommendations.push({
+                            recommendation_id: checkbox.value,
+                            checked: checkbox.checked
+                        });
+                    });
+    
+                    // Send PATCH request to /adapt
+                    try {
+                        const patchResponse = await fetch('/adapt', {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(selectedRecommendations),
+                        });
+    
+                        if (!patchResponse.ok) {
+                            throw new Error("Failed to update recommendations.");
+                        }
+
+                        // After PATCH, get the updated playlist_id from the response
+                        playlist_id = await patchResponse.text();
+
+                        // Fetch the updated recommendations using the playlist_id after PATCH
+                        const getResponse = await fetch(`/recommend/${playlist_id}`);
+                        if (!getResponse.ok) {
+                            throw new Error("Failed to fetch updated recommendations.");
+                        }
+
+                        const updatedRecommendations = await getResponse.json();
+
+                        // Display the updated recommendations using the PATCH response
+                        const updatedOutputDiv = document.getElementById("recommendations-output");
+                        updatedOutputDiv.innerHTML = `
+                            <h2>Updated Recommendations:</h2>
+                            <form id="recommendations-list">
+                                ${updatedRecommendations.map((r, index) => `
+                                    <div>
+                                        <input type="checkbox" id="rec-${index}" name="recommendation" value="${r.id}">
+                                        <label for="rec-${index}">${JSON.stringify(r)}</label>
+                                    </div>
+                                `).join('')}
+                                <button type="button" id="submit-selected">Submit Selected Recommendations</button>
+                            </form>
+                        `;
+                        
+                        // Re-add the event listener to handle future clicks
+                        document.getElementById("submit-selected").addEventListener("click", arguments.callee);
+                    } catch (error) {
+                        document.getElementById("response-message").textContent = `Error: ${error.message}`;
+                    }
+                });
+    
             } catch (error) {
                 document.getElementById("response-message").textContent = `Error: ${error.message}`;
             }
         });
     </script>
-    
 </body>
 </html>

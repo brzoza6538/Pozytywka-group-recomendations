@@ -1,11 +1,12 @@
 from flask import Blueprint, jsonify, request, render_template
 from models import Recommendation, Artist, User, Track, Session, db
+import random
 
 model_blueprint = Blueprint("recommendation", __name__)
 
 
 def get_recommendations_by_playlist_id(playlist_id):
-    reccommendations = Recommendation.query.filter(Recommendation.playlist_id == playlist_id).all()
+    reccommendations = Recommendation.query.filter(Recommendation.playlist_id == playlist_id and Recommendation.reaction == None).all()
     return reccommendations
 
 @model_blueprint.route('/')
@@ -18,11 +19,12 @@ def get_recommendation(playlist_id):
         Recommendation.query
         .filter(Recommendation.playlist_id == playlist_id)
         .order_by(Recommendation.id.desc()) 
-        .limit(5)
+        .limit(3)
         .all()
     )
 
     return jsonify([recommendation.to_dict() for recommendation in recommendations])
+
 
 @model_blueprint.route("/recommend", methods=["POST"])
 def create_recommendation():
@@ -47,4 +49,23 @@ def create_recommendation():
     return str(playlist_id), 201
 
 
+
+
+
+@model_blueprint.route("/adapt", methods=["PATCH"])
+def update_recomendations():
+    reviews = {}
+    
+    data = request.get_json()
+    for line in data:
+        reviews[line["recommendation_id"]] = bool(line["checked"])
+
+
+    playlist_id = random.randint(6, 8)
+
+    return str(playlist_id), 201
+
+
 #PATCH nie zmienia kolejności
+
+
