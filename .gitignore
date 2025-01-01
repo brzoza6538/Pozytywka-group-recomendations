@@ -1,0 +1,73 @@
+#unpacked data
+data/*.jsonl
+!data/*.jsonl.gz
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+
+# Flask specific
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# virtual environment
+venv/
+env/
+ENV/
+.venv/
+.Python
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Python egg and distribution
+*.egg
+*.egg-info
+dist/
+build/
+
+# PyCharm specific
+.idea/
+
+# Docker
+docker-compose.override.yml
+.docker/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Log files
+*.log
+
+# Environment variables (to keep them safe)
+.env
+.env.*
+
+# pytest cache
+.cache/
+
+# coverage reports
+.coverage
+coverage.xml
+*.cover
+*.py,cover
+
+# Flask-Caching (cache files)
+.flask_caching/
