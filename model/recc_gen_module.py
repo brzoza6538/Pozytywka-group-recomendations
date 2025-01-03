@@ -196,7 +196,7 @@ def prepare_features_without_disrete(tracks_data):
    return np.array(features)
 
 
-def recommend_tracks(tracks_data):
+def recommend_tracks_for_cluster(tracks_data):
    liked_tracks_ids = [track["track_id"] for track in tracks_data]
    propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
    
@@ -213,16 +213,16 @@ def recommend_tracks(tracks_data):
    
    return recommended_tracks
 ######################################################################################################
-def module_1(data):
+def reccomend_for_group(user_ids):
    
-   tracks_ids = get_top_tracks(data)
+   tracks_ids = get_top_tracks(user_ids)
    tracks_data = get_tracks_by_ids(tracks_ids)
    track_clusters = cluster_tracks(tracks_data)
 
    recommendations = []
 
    for cluster in track_clusters:
-      recommendations += recommend_tracks(cluster)
+      recommendations += recommend_tracks_for_cluster(cluster)
 
    return jsonify(recommendations)
    

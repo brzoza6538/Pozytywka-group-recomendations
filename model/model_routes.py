@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, render_template
 from models import Recommendation, Artist, User, Track, Session, db
 import random
-from model.recc_gen_module import module_1
+from model.recc_gen_module import reccomend_for_group
 
 
 model_blueprint = Blueprint("recommendation", __name__)
@@ -67,7 +67,6 @@ def update_recomendations():
 
     return str(playlist_id), 201
 
-
 #PATCH nie zmienia kolejności
 
 
@@ -75,4 +74,4 @@ def update_recomendations():
 @model_blueprint.route("/check", methods=["POST"])
 def mock_test():
     data = request.get_json()
-    return module_1(data), 201
+    return reccomend_for_group(data), 201
