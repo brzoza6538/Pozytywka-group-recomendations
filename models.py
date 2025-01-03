@@ -83,7 +83,7 @@ class Track(db.Model):
         self.duration_ms = data["duration_ms"]
         self.explicit = bool(data["explicit"])
         self.artist_id = data["id_artist"]
-        self.release_date = data["release_date"][:4]
+        self.release_date = int(data["release_date"][:4])
         self.danceability = data["danceability"]
         self.energy = data["energy"]
         self.key = data["key"]
@@ -122,14 +122,14 @@ class Track(db.Model):
 class Session(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, nullable=False)
-    timestamp = db.Column(db.String(19), nullable=False) # no nanoseconds
+    timestamp = db.Column(db.DateTime, nullable=False) # no nanoseconds
     user_id = db.Column(db.Integer, nullable=False)
     track_id = db.Column(db.String(22), nullable=True)
     event_type = db.Column(db.String(20), nullable=False) #skip, play, like, advertisment
 
     def __init__(self, data):
         self.session_id = data["session_id"]
-        self.timestamp = data["timestamp"][:19]
+        self.timestamp = datetime.strptime(data["timestamp"], "%Y-%m-%dT%H:%M:%S") 
         self.user_id = data["user_id"]
         self.track_id = data["track_id"]
         self.event_type = data["event_type"]
@@ -138,7 +138,7 @@ class Session(db.Model):
         return {
             "action_id": self.id,
             "session_id": self.session_id,
-            "timestamp": self.timestamp,
+            "timestamp": self.timestamp.strftime("%Y-%m-%dT%H:%M:%S"),
             "user_id": self.user_id,
             "track_id": self.track_id,
             "event_type": self.event_type,

@@ -1,13 +1,15 @@
 from flask import Blueprint, jsonify, request, render_template
 from models import Recommendation, Artist, User, Track, Session, db
 import random
+from model.recc_gen_module import module_1
+
 
 model_blueprint = Blueprint("recommendation", __name__)
 
 
 def get_recommendations_by_playlist_id(playlist_id):
-    reccommendations = Recommendation.query.filter(Recommendation.playlist_id == playlist_id and Recommendation.reaction == None).all()
-    return reccommendations
+    recommendations = Recommendation.query.filter((Recommendation.playlist_id == playlist_id) & (Recommendation.reaction == None)).all()
+    return recommendations
 
 @model_blueprint.route('/')
 def index():
@@ -69,3 +71,8 @@ def update_recomendations():
 #PATCH nie zmienia kolejności
 
 
+
+@model_blueprint.route("/check", methods=["POST"])
+def mock_test():
+    data = request.get_json()
+    return module_1(data), 201
