@@ -1,5 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 import uuid
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -129,7 +130,7 @@ class Session(db.Model):
 
     def __init__(self, data):
         self.session_id = data["session_id"]
-        self.timestamp = datetime.strptime(data["timestamp"], "%Y-%m-%dT%H:%M:%S") 
+        self.timestamp = datetime.strptime(data["timestamp"][:19], "%Y-%m-%dT%H:%M:%S") #nanoseconds not included
         self.user_id = data["user_id"]
         self.track_id = data["track_id"]
         self.event_type = data["event_type"]
