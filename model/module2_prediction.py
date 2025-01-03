@@ -8,7 +8,8 @@ class PredictionModel:
     def prepare_data_for_user(self, user_id, user_session, tracks):
         '''
         Przygotowuje dane treningowe dla użytkownika
-        na podstawie historii sesji użytkownika oraz dodatkowych informacji o utworach.
+        na podstawie historii sesji użytkownika oraz dodatkowych
+        informacji o utworach.
 
         :param user_id: ID użytkownika
         :param user_session: Dane sesji użytkownika
@@ -82,8 +83,11 @@ class PredictionModel:
         '''
         all_data = []
         for user_id in list_user_id:
-            user_session = list_user_session[list_user_session['user_id'] == user_id]
-            user_data = self.prepare_data_for_user(user_id, user_session, tracks)
+            user_session = list_user_session[list_user_session['user_id'] ==
+                                             user_id]
+            user_data = self.prepare_data_for_user(user_id,
+                                                   user_session,
+                                                   tracks)
             all_data.extend(user_data)
 
         return all_data
@@ -108,7 +112,8 @@ class PredictionModel:
         :return: Wynik predykcji
         '''
         if self.weights is None:
-            raise ValueError("Model nie został przeszkolony. Użyj metody train().")
+            raise ValueError("Model nie został przeszkolony." +
+                             "Użyj metody train().")
 
         # Sprawdź, czy mamy dane o tym utworze
         if song_id not in tracks:
