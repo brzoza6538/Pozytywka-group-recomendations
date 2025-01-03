@@ -131,7 +131,7 @@ def get_tracks_without_mentioned_by_ids(track_ids):
 
 
 ######################################################################################################
-def prepare_feature(tracks_data):
+def prepare_features(tracks_data):
    features = []
    for track in tracks_data:
       feature_vector = [
