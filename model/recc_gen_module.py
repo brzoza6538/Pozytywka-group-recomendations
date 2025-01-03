@@ -209,7 +209,7 @@ def recommend_tracks(tracks_data):
    
    propositions_with_similarity = [(track, similarity[0]) for track, similarity in zip(propositions_pool, similarities)]
    propositions_with_similarity.sort(key=lambda x: x[1], reverse=True)
-   recommended_tracks = [track for track, _ in propositions_with_similarity[:CLUSTER_RECOMMENDATION]]
+   recommended_tracks = [track["track_id"] for track, _ in propositions_with_similarity[:CLUSTER_RECOMMENDATION]]
    
    return recommended_tracks
 ######################################################################################################
@@ -219,44 +219,10 @@ def module_1(data):
    tracks_data = get_tracks_by_ids(tracks_ids)
    track_clusters = cluster_tracks(tracks_data)
 
-   # release = ""
-
-   # for cluster in track_clusters:
-   #    release += f"{[ track['name'] for track in cluster]} \n\n----------\n\n"
-
    recommendations = []
-   release = ""
 
    for cluster in track_clusters:
       recommendations += recommend_tracks(cluster)
 
-   ids = [track['track_id'] for track in recommendations]
-
-   release += f"{get_tracks_by_ids(ids)} \n\n----------\n\n" 
-
+   return jsonify(recommendations)
    
-
-   return release
-   
-
-
-   #  recommendations = (
-   #      Recommendation.query
-   #      .filter(Recommendation.playlist_id == 45)
-   #      .order_by(Recommendation.id.desc()) 
-   #      .limit(3)
-   #      .all()
-   #  )
-
-   #  return jsonify([recommendation.to_dict() for recommendation in recommendations])
-
-   # sample_data = [
-   #    {"id": "6kD1SNGPkfX9LwaGd1FG92", "name": "Put Your Dreams Away (For Another Day)", "popularity": 53, "duration_ms": 186173, "explicit": 0, "artist_id": "1Mxqyy3pSjf8kZZL4QVxS0", "release_date": "1944", "danceability": 0.197, "energy": 0.0546, "key": 1, "loudness": -22.411, "speechiness": 0.0346, "acousticness": 0.95, "instrumentalness": 0.276, "liveness": 0.152, "valence": 0.1, "tempo": 90.15},
-   #    {"id": "4Pnzw1nLOpDNV6MKI5ueIR", "name": "Nancy (With the Laughing Face) - 78rpm Version", "popularity": 55, "duration_ms": 199000, "explicit": 0, "artist_id": "1Mxqyy3pSjf8kZZL4QVxS0", "release_date": "1944", "danceability": 0.295, "energy": 0.0826, "key": 1, "loudness": -19.569, "speechiness": 0.0367, "acousticness": 0.984, "instrumentalness": 0.000358, "liveness": 0.156, "valence": 0.169, "tempo": 128.6},
-   #    {"id": "7GLmfKOe5BfOXk7334DoKt", "name": "Saturday Night (Is The Loneliest Night In The Week)", "popularity": 54, "duration_ms": 163000, "explicit": 0, "artist_id": "1Mxqyy3pSjf8kZZL4QVxS0", "release_date": "1944", "danceability": 0.561, "energy": 0.335, "key": 9, "loudness": -11.093, "speechiness": 0.0499, "acousticness": 0.84, "instrumentalness": 1.52e-06, "liveness": 0.788, "valence": 0.59, "tempo": 126.974},
-   #    {"id": "6JpN5w95em8SODPiM7W2PH", "name": "The Story of O.J.", "popularity": 66, "duration_ms": 231760, "explicit": 1, "artist_id": "3nFkdlSjzX9mRTtwJOzDYB", "release_date": "2017-07-07", "danceability": 0.741, "energy": 0.718, "key": 7, "loudness": -5.823, "speechiness": 0.415, "acousticness": 0.283, "instrumentalness": 2.21e-06, "liveness": 0.23, "valence": 0.576, "tempo": 165.848},
-   #    {"id": "1gT5TGwbkkkUliNzHRIGi1", "name": "4:44", "popularity": 65, "duration_ms": 284493, "explicit": 1, "artist_id": "3nFkdlSjzX9mRTtwJOzDYB", "release_date": "2017-07-07", "danceability": 0.261, "energy": 0.852, "key": 9, "loudness": -4.965, "speechiness": 0.158, "acousticness": 0.139, "instrumentalness": 4.26e-05, "liveness": 0.477, "valence": 0.431, "tempo": 177.997},
-   #    {"id": "3nDYsXggRQxf7PCNUjR4rz", "name": "Dead Presidents II", "popularity": 57, "duration_ms": 266067, "explicit": 1, "artist_id": "3nFkdlSjzX9mRTtwJOzDYB", "release_date": "1996-06-25", "danceability": 0.758, "energy": 0.912, "key": 0, "loudness": -8.758, "speechiness": 0.349, "acousticness": 0.172, "instrumentalness": 1.09e-06, "liveness": 0.149, "valence": 0.573, "tempo": 87.335},
-   #    {"id": "0ZHu7jkSSrT0eK4OxuG4O5", "name": "Excuse Me Miss", "popularity": 58, "duration_ms": 281240, "explicit": 1, "artist_id": "3nFkdlSjzX9mRTtwJOzDYB", "release_date": "2002-11-12", "danceability": 0.714, "energy": 0.862, "key": 6, "loudness": -5.531, "speechiness": 0.286, "acousticness": 0.0305, "instrumentalness": 0.0, "liveness": 0.0884, "valence": 0.887, "tempo": 92.849},
-
-   # ]
