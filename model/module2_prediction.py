@@ -5,49 +5,132 @@ class PredictionModel:
     def __init__(self):
         self.weights = None
 
-    def prepare_data(self, session_data, song_data, user_id):
+    def prepare_data_for_user(self, user_id, user_session, tracks):
         '''
-        Przygotowuje dane treningowe na podstawie historii sesji użytkownika.
+        Przygotowuje dane treningowe dla użytkownika
+        na podstawie historii sesji użytkownika oraz dodatkowych informacji o utworach.
 
-        :param session_data: Dane sesji użytkownika
-        :param song_data: Dane o piosenkach
         :param user_id: ID użytkownika
-        :return: Dane treningowe (X, y)
+        :param user_session: Dane sesji użytkownika
+        :param tracks: Dane utworów (track_id -> features)
+        :return: Dane użytkownika (lista [cechy, akceptacja])
         '''
-        user_sessions = session_data[session_data['user_id'] == user_id]
-        merged_data = user_sessions.merge(song_data, on='song_id', how='left')
+        # Filtrowanie sesji użytkownika
+        user_sessions = user_session[user_session['user_id'] == user_id]
 
-        X = merged_data.drop(columns=['acceptance', 'user_id', 'song_id'])
-        y = merged_data['acceptance']  # 0 = skip, 1 = play/like
+        # Tworzenie danych
+        user_data = []
+        for _, session in user_sessions.iterrows():
+            if session['event_type'] == 'play' and session['track_id'] is not None:
+                track_id = session['track_id']
 
-        return X.values, y.values
+                # Sprawdź, czy mamy dane o tym utworze
+                if track_id in tracks:
+                    track_info = tracks[track_id]
+                    track_features = [
+                        track_info['danceability'],
+                        track_info['energy'],
+                        track_info['popularity'],
+                        track_info['duration_ms'],
+                        track_info['explicit'],
+                        track_info['loudness'],
+                        track_info['speechiness'],
+                        track_info['acousticness'],
+                        track_info['instrumentalness'],
+                        track_info['liveness'],
+                        track_info['valence'],
+                        track_info['tempo']
+                    ]
+
+                    # Akceptacja - 1 = play, 0 = skip
+                    user_data.append((track_features, 1))  # 1 oznacza play
+
+            elif session['event_type'] == 'skip' and session['track_id'] is not None:
+                track_id = session['track_id']
+
+                # Sprawdź, czy mamy dane o tym utworze
+                if track_id in tracks:
+                    track_info = tracks[track_id]
+                    track_features = [
+                        track_info['danceability'],
+                        track_info['energy'],
+                        track_info['popularity'],
+                        track_info['duration_ms'],
+                        track_info['explicit'],
+                        track_info['loudness'],
+                        track_info['speechiness'],
+                        track_info['acousticness'],
+                        track_info['instrumentalness'],
+                        track_info['liveness'],
+                        track_info['valence'],
+                        track_info['tempo']
+                    ]
+
+                    # Akceptacja - 0 oznacza skip
+                    user_data.append((track_features, 0))  # 0 oznacza skip
+
+        return user_data
+
+    def prepare_all_data(self, list_user_id, list_user_session, tracks):
+        '''
+        Sumuje dane treningowe każdego z użytkowników.
+
+        :param list_user_id: Lista ID użytkowników
+        :param list_user_session: Dane sesji wszystkich użytkowników
+        :param tracks: Dane utworów (track_id -> features)
+        :return: Połączone dane dla wszystkich użytkowników
+        '''
+        all_data = []
+        for user_id in list_user_id:
+            user_session = list_user_session[list_user_session['user_id'] == user_id]
+            user_data = self.prepare_data_for_user(user_id, user_session, tracks)
+            all_data.extend(user_data)
+
+        return all_data
 
     def train(self, X, y):
         '''
-        Trenuje model poprzez dopasowanie wag cech na podstawie prostego
-        podejścia regresyjnego.
+        Trenuje model na podstawie dostarczonych danych.
 
-        :param X: Dane wejściowe (macierz cech)
-        :param y: Etykiety (0 lub 1)
+        :param X: Dane wejściowe (cechy)
+        :param y: Dane wyjściowe (etykiety)
         '''
-        X = np.hstack([np.ones((X.shape[0], 1)), X])
-
-        # Obliczanie wag za pomocą regresji liniowej (normal equation)
+        X = np.hstack([np.ones((X.shape[0], 1)), X])  # Dodaj stałą do cech
         self.weights = np.linalg.pinv(X.T @ X) @ X.T @ y
 
-    def predict(self, song_features):
+    def predict(self, song_id, tracks, artists):
         '''
-        Przewiduje akceptację piosenki na podstawie jej cech.
+         Przewiduje ocenę dla piosenki na podstawie song_id.
 
-        :param song_features: Dane wejściowe dla pojedynczej piosenki
-        :return: Wartość przewidywania (float)
+        :param song_id: ID piosenki
+        :param tracks: Dane utworów (track_id -> features)
+        :param artists: Dane artystów (artist_id -> genres)
+        :return: Wynik predykcji
         '''
         if self.weights is None:
-            raise ValueError("Model nie został przeszkolony. " +
-                             "Użyj metody train().")
+            raise ValueError("Model nie został przeszkolony. Użyj metody train().")
 
-        song_features = np.hstack([1, song_features])
-        prediction = song_features @ self.weights
+        # Sprawdź, czy mamy dane o tym utworze
+        if song_id not in tracks:
+            raise ValueError(f"Nie znaleziono piosenki o ID {song_id}")
 
-        # Skalowanie wyniku do przedziału [0, 1]
-        return 1 / (1 + np.exp(-prediction))
+        track_info = tracks[song_id]
+        track_features = [
+            track_info['danceability'],
+            track_info['energy'],
+            track_info['popularity'],
+            track_info['duration_ms'],
+            track_info['explicit'],
+            track_info['loudness'],
+            track_info['speechiness'],
+            track_info['acousticness'],
+            track_info['instrumentalness'],
+            track_info['liveness'],
+            track_info['valence'],
+            track_info['tempo']
+        ]
+
+        features = np.hstack([1, track_features])
+
+        prediction = features @ self.weights
+        return 1 / (1 + np.exp(-prediction))  # Skalowanie do przedziału [0, 1]
