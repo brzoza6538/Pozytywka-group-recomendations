@@ -72,6 +72,7 @@ class PredictionModel:
                     ]
 
                     # Akceptacja - 0 oznacza skip
+                    # zamiast 0, -1?
                     user_data.append((track_features, 0))  # 0 oznacza skip
 
         return user_data
@@ -87,7 +88,9 @@ class PredictionModel:
         '''
         all_data = []
         for user_id in list_user_id:
-            user_session = list_user_session[list_user_session['user_id'] ==
+# zamienie na to:
+#            list(filter(lambda person: person['name'] == 'Pam', people))
+            user_session = list_user_session[list_user_session["user_id"] ==
                                              user_id]
             user_data = self.prepare_data_for_user(user_id,
                                                    user_session,
@@ -142,10 +145,9 @@ class PredictionModel:
 
         prediction = features @ self.weights
         return 1 / (1 + np.exp(-prediction))  # Skalowanie do przedziału [0, 1]
-    
+
 
     # rozszerzenie do edytowania w czasie rzeczywistym
-
     def replay_track(self, track_id):
         if track_id in self.playlist:
             self.history.append((track_id, 'replay'))
