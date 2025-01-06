@@ -57,7 +57,7 @@ def create_recommendation():
 @model_blueprint.route("/adapt", methods=["PATCH"])
 def update_recomendations():
     reviews = {}
-    
+
     data = request.get_json()
     for line in data:
         reviews[line["recommendation_id"]] = bool(line["checked"])
@@ -75,3 +75,33 @@ def update_recomendations():
 def mock_test():
     data = request.get_json()
     return reccomend_for_group(data), 201
+
+
+
+# Pobieranie użytkowników
+@model_blueprint.route('/users', methods=['GET'])
+def get_users():
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users]), 200
+
+
+# Pobieranie sesji
+@model_blueprint.route('/sessions', methods=['GET'])
+def get_sessions():
+    sessions = Session.query.all()
+    return jsonify([session.to_dict() for session in sessions]), 200
+
+
+# Pobieranie utworów
+@model_blueprint.route('/tracks', methods=['GET'])
+def get_tracks():
+    tracks = Track.query.all()
+    return jsonify([track.to_dict() for track in tracks]), 200
+
+
+# Pobieranie artystów
+@model_blueprint.route('/artists', methods=['GET'])
+def get_artists():
+    artists = Artist.query.all()
+    return jsonify([artist.to_dict() for ar
+tist in artists]), 200
