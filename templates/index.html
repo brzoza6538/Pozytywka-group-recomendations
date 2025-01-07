@@ -17,17 +17,15 @@
     <div id="recommendations-output"></div>
 
     <script>
-        let playlist_id = null;  // Variable to hold the playlist_id
-
         document.getElementById("recommendation-form").addEventListener("submit", async function(event) {
             event.preventDefault(); // Prevent default form submission
-    
+
             const recommendationString = document.getElementById("recommendation").value;
-    
+
             try {
                 // Parse the recommendation string to JSON
                 const recommendationData = JSON.parse(recommendationString);
-    
+
                 // Send POST request to /recommend
                 const postResponse = await fetch('/recommend', {
                     method: 'POST',
@@ -36,22 +34,22 @@
                     },
                     body: JSON.stringify(recommendationData),
                 });
-    
+
                 if (!postResponse.ok) {
                     throw new Error("Failed to create recommendation.");
                 }
-    
+
                 // Parse the playlist_id from the response (text response)
                 playlist_id = await postResponse.text();
-    
+
                 // Fetch recommendations using the playlist_id
                 const getResponse = await fetch(`/recommend/${playlist_id}`);
                 if (!getResponse.ok) {
                     throw new Error("Failed to fetch recommendations.");
                 }
-    
+
                 const recommendations = await getResponse.json();
-    
+
                 // Display recommendations with checkboxes
                 const outputDiv = document.getElementById("recommendations-output");
                 outputDiv.innerHTML = `
@@ -66,12 +64,12 @@
                         <button type="button" id="submit-selected">Submit Selected Recommendations</button>
                     </form>
                 `;
-    
+
                 // Add event listener for the submit button
                 document.getElementById("submit-selected").addEventListener("click", async function() {
                     const selectedRecommendations = [];
                     const checkboxes = document.querySelectorAll('#recommendations-list input[type="checkbox"]');
-    
+
                     checkboxes.forEach(checkbox => {
                         // Get the recommendation_id and whether it's checked
                         selectedRecommendations.push({
@@ -79,17 +77,26 @@
                             checked: checkbox.checked
                         });
                     });
-    
-                    // Send PATCH request to /adapt
+
+                    // Print out the data being sent in PATCH request to console
+                    console.log("Data sent to PATCH:", {
+                        playlist_id: playlist_id,  // Include playlist_id here
+                        selectedRecommendations: selectedRecommendations
+                    });
+
+                    // Send PATCH request to /adapt with playlist_id
                     try {
                         const patchResponse = await fetch('/adapt', {
                             method: 'PATCH',
                             headers: {
                                 'Content-Type': 'application/json',
                             },
-                            body: JSON.stringify(selectedRecommendations),
+                            body: JSON.stringify({
+                                playlist_id: playlist_id,  // Include playlist_id here
+                                selectedRecommendations: selectedRecommendations
+                            }),
                         });
-    
+
                         if (!patchResponse.ok) {
                             throw new Error("Failed to update recommendations.");
                         }
@@ -107,7 +114,7 @@
 
                         // Display the updated recommendations using the PATCH response
                         const updatedOutputDiv = document.getElementById("recommendations-output");
-                        updatedOutputDiv.innerHTML = `
+                        updatedOutputDiv.innerHTML = ` 
                             <h2>Updated Recommendations:</h2>
                             <form id="recommendations-list">
                                 ${updatedRecommendations.map((r, index) => `
@@ -119,14 +126,14 @@
                                 <button type="button" id="submit-selected">Submit Selected Recommendations</button>
                             </form>
                         `;
-                        
+
                         // Re-add the event listener to handle future clicks
                         document.getElementById("submit-selected").addEventListener("click", arguments.callee);
                     } catch (error) {
                         document.getElementById("response-message").textContent = `Error: ${error.message}`;
                     }
                 });
-    
+
             } catch (error) {
                 document.getElementById("response-message").textContent = `Error: ${error.message}`;
             }
