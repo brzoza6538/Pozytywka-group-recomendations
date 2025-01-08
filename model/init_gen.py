@@ -1,4 +1,4 @@
-from flask import Blueprint, jsonify, request, render_template
+from flask import Blueprint, request, render_template
 from models import Recommendation, Artist, User, Track, Session, db
 from datetime import datetime, timedelta
 
@@ -14,15 +14,13 @@ from collections import Counter
 TIME_BORDER = datetime.utcnow() - timedelta(days=90)
 USERS_LIKED_TRACKS_AMOUNT = 100
 CLUSTER_RECOMMENDATION = 10
-TASTE_GROUPS = 10 #TODO zależne od ilości osób? 
-
-TRAIN_DATA_AMOUNT = 0
+TASTE_GROUPS = 5 #TODO zależne od ilości osób? 
 
 LIKE_WEIGHT = 5
 SKIP_WEIGHT = -5
 PLAY_WEIGHT = 4
 
-FINAL_PLAYLIST_LENGTH = 10
+FINAL_PLAYLIST_LENGTH = 30
 
 #znajdujesz z tego piosenki które wszystkim się podobają więc może być ich od cholery
 #dopiero później skróć do n najlepiej ocenianych gdzie n jest na tyle małe że generowanie na bieżąco biędzie miało czas zadzialać
@@ -131,24 +129,6 @@ def get_tracks_by_ids(track_ids):
       tracks.append((Track.query.filter(Track.track_id == track_id).first()).to_dict())
    return tracks
    
-
-# def get_tracks_by_ids(track_ids): # added artist data for checking results
-#     tracks_with_artists = (
-#         db.session.query(Track, Artist)
-#         .join(Artist, Track.artist_id == Artist.id)
-#         .filter(Track.track_id.in_(track_ids))
-#         .all()
-#     )
-
-#     tracks = []
-#     for track, artist in tracks_with_artists:
-#         track_dict = track.to_dict()
-#         artist_dict = artist.to_dict()
-
-#         track_dict['artist'] = artist_dict
-#         tracks.append(track_dict)
-
-#     return tracks
 
 def get_tracks_without_mentioned_by_ids(track_ids):
     tracks = Track.query.filter(~Track.track_id.in_(track_ids)).all()
@@ -345,21 +325,3 @@ def recommend_for_group(user_ids):
 
    return data
 
-
-
-# example of PATHC data 
-
-# [
-#     {
-#         "recommendation_id": "1",
-#         "checked": true
-#     },
-#     {
-#         "recommendation_id": "2",
-#         "checked": false
-#     },
-#     {
-#         "recommendation_id": "3",
-#         "checked": true
-#     }
-# ]

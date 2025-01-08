@@ -154,10 +154,10 @@ class Recommendation(db.Model):
     reaction = db.Column(db.Boolean, nullable=True) #skiped, not skipped, not yet decided
 
 
-    def __init__(self, playlist_id, track_id):
+    def __init__(self, playlist_id, track_id, reaction=None):
         self.playlist_id = playlist_id
         self.track_id = track_id
-        self.reaction = None
+        self.reaction = reaction
 
     def to_dict(self):
         return {
