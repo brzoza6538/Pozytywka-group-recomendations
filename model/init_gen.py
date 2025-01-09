@@ -10,6 +10,8 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 from collections import Counter
 
+import random
+
 
 TIME_BORDER = datetime.utcnow() - timedelta(days=90)
 USERS_LIKED_TRACKS_AMOUNT = 100
@@ -222,81 +224,67 @@ def recommend_tracks_for_cluster(tracks_data):
    return recommended_tracks
 ######################################################################################################
 
+def evaluate_tracks(train_data, test_data):
+   train_tracks = [get_tracks_by_ids([track_id])[0] for track_id in train_data.keys()]
+   features_list = prepare_features_without_discrete(train_tracks)
+   labels = list(train_data.values())
 
+   tree = DecisionTreeRegressor(max_depth=5)
+   tree.fit(features_list, labels)
 
-def evaluate_tracks(user_id, tracks_id):
-    """
-    Przyjmuje ID użytkownika, sesję użytkownika oraz dane utworów,
-    a następnie zwraca oceny piosenek na podstawie modelu drzewa decyzyjnego.
+   test_tracks = get_tracks_by_ids(test_data)
+   predictions = {}
 
-    :param user_id: ID użytkownika
-    :param tracks_id: Lista ID utworów do oceny
-    :return: Słownik {track_id: ocena}
-    """
-    # Przygotowanie danych treningowych
-    training_data = get_weighed_tracks(user_id)
+   for track in test_tracks:
+      track_features = [
+         track["danceability"],
+         track["energy"],
+         track["loudness"],
+         track["speechiness"],
+         track["acousticness"],
+         track["instrumentalness"],
+         track["liveness"],
+         track["valence"],
+         track["tempo"]
+      ]
+      score = tree.predict([track_features])[0]
+      predictions[track["track_id"]] = max(0, min(1, score))
 
-    # Przygotowanie cech i etykiet dla danych treningowych
-    tracks_data = [get_tracks_by_ids([track_id])[0] for track_id in training_data.keys()]
-    features_list = prepare_features_without_discrete(tracks_data)
-    labels = list(training_data.values())  # Oceny dla treningowych utworów
-
-    # Budowa modelu drzewa decyzyjnego
-    tree = DecisionTreeRegressor(max_depth=5)  # Maksymalna głębokość drzewa (można dostosować)
-    tree.fit(features_list, labels)  # Trening drzewa na danych
-
-    # Pobranie utworów, które chcemy ocenić
-    tracks = get_tracks_by_ids(tracks_id)
-    predictions = {}
-
-    # Przewidywanie ocen dla każdego utworu
-    for track in tracks:
-        try:
-            # Przygotowanie cech dla konkretnego utworu
-            track_features = [
-                track["danceability"], 
-                track["energy"], 
-                track["loudness"], 
-                track["speechiness"], 
-                track["acousticness"], 
-                track["instrumentalness"], 
-                track["liveness"], 
-                track["valence"], 
-                track["tempo"]
-            ]
-            # Obliczanie score'u (wyniku) utworu za pomocą drzewa
-            score = tree.predict([track_features])[0]
-            # Normalizacja wyniku na przedział 0-1 (opcjonalnie)
-            predictions[track["track_id"]] = max(0, min(1, score))
-        except KeyError as e:
-            raise ValueError(f"Brak wymaganej cechy w danych utworów: {e}")
-
-    return predictions
-
+   return predictions
+######################################################################    
 
 def test_tree_accuracy():
-   users_id = [
-    101, 202, 303, 404, 505, 606, 707, 808, 909,
+   users_id = [101,
+    202, 303, 404, 505, 606, 707, 808, 909,
     102, 202, 302, 402, 502, 602, 702, 802, 902
    ]
 
-   # pred = []
-   # base = []
+   pred = []
+   base = []
    delt = []
 
+   results  = ""
+
    for user_id in users_id:
-      training_data = get_weighed_tracks(user_id)
 
-      prediction = evaluate_tracks(user_id, training_data)
-      results  = ""
+      train_data = get_weighed_tracks(user_id)
 
-      for track in training_data.keys():
-         #results += f" {track}  : {round(prediction[track], 3)} : {round(training_data[track], 3)} ---- {round(abs(prediction[track] - training_data[track]), 3)}\n"
-         # pred.append(prediction[track])
-         # base.append(training_data[track])
-         delt.append(abs(prediction[track] - training_data[track]))
 
-   return round(np.mean(delt), 3)
+      train_data = dict(list(train_data.items())[20:])
+      test_data = dict(list(train_data.items())[:20])
+
+
+      tracks_data = [track_id for track_id in test_data.keys()]
+
+      prediction = evaluate_tracks(train_data, test_data)
+
+      for track in tracks_data:
+         results += f" {track}  : {round(prediction[track], 3)} : {round(test_data.get(track, 0), 3)} ---- {round(abs(prediction[track] - test_data.get(track, 0)), 3)}\n"
+         pred.append(prediction[track])
+         base.append(test_data.get(track, 0))
+         delt.append(abs(prediction[track] - test_data.get(track, 0)))
+   results += f"\n\n\-------\n\n min :  {round(np.min(delt), 3)}\n max : {round(np.max(delt), 3)}\n ddelt ---- {round(np.mean(delt), 3)}\n\n\-------\n\n"
+   return str(results)
 
 ######################################################################################################
 
@@ -317,8 +305,8 @@ def recommend_for_group(user_ids):
    
    data = {}
    for user_id in user_ids:
-      x = evaluate_tracks(user_id, recommendations)
-      data = {key: data.get(key, 0) + x.get(key, 0) for key in data | x}
+      predictions = evaluate_tracks(get_weighed_tracks(user_id), recommendations)
+      data = {key: data.get(key, 0) + predictions.get(key, 0) for key in data | predictions}
 
    data = sorted(data, key=data.get, reverse=True)[:FINAL_PLAYLIST_LENGTH]
 

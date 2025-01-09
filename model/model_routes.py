@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, render_template
 from models import Recommendation, Artist, User, Track, Session, db
 import random
-from model.init_gen import recommend_for_group
+from model.init_gen import recommend_for_group, test_tree_accuracy
 from model.active_gen import recommend_more
 import uuid
 
@@ -82,64 +82,31 @@ def create_recommendation():
 
 @model_blueprint.route("/adapt", methods=["PATCH"])
 def update_recommendations():
-    try:
-        # Pobranie danych z requesta
-        data = request.get_json()
-        if not data:
-            return {"error": "No data provided in the request body."}, 400
+    data = request.get_json()
+    playlist_id = data.get("playlist_id")
 
-        playlist_id = data.get("playlist_id")
-        if not playlist_id:
-            return {"error": "Missing playlist_id in the request data."}, 400
+    for line in data['selectedRecommendations']:
+        recommendation_id = line.get("recommendation_id")
+        recommendation = Recommendation.query.get(recommendation_id)
 
-        # Aktualizacja reakcji w rekomendacjach
-        if 'selectedRecommendations' not in data:
-            return {"error": "Missing 'selectedRecommendations' in the request data."}, 400
+        recommendation.reaction = bool(line.get("checked"))
+    db.session.commit()
 
-        for line in data['selectedRecommendations']:
-            recommendation_id = line.get("recommendation_id")
-            if not recommendation_id:
-                return {"error": "Recommendation ID is missing in the selectedRecommendations."}, 400
 
-            recommendation = Recommendation.query.get(recommendation_id)
-            if recommendation is None:
-                return {"error": f"Recommendation with ID {recommendation_id} not found."}, 404
 
-            # Zaktualizowanie reakcji
-            recommendation.reaction = bool(line.get("checked"))
-        
-        # Zapisanie zmian w bazie danych
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            return {"error": f"Error committing transaction: {str(e)}"}, 500
+    track_ids = recommend_more(playlist_id)
 
-        # Generowanie nowych rekomendacji
-        track_ids = recommend_more(playlist_id)
-        if not track_ids:
-            return {"error": "No track IDs returned by recommend_more function."}, 500
+    for track in track_ids:
+        existing_recommendation = Recommendation.query.filter_by(playlist_id=playlist_id, track_id=track).first()
+        if not existing_recommendation:
+            new_recommendation = Recommendation(playlist_id=playlist_id, track_id=track)
+            db.session.add(new_recommendation)
 
-        # Dodawanie nowych rekomendacji do bazy danych
-        for track in track_ids:
-            existing_recommendation = Recommendation.query.filter_by(playlist_id=playlist_id, track_id=track).first()
-            if not existing_recommendation:
-                new_recommendation = Recommendation(playlist_id=playlist_id, track_id=track)
-                db.session.add(new_recommendation)
+    db.session.commit()
 
-        # Zapisanie nowych rekomendacji w bazie danych
-        try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            return {"error": f"Error committing new recommendations: {str(e)}"}, 500
+    return str(playlist_id), 201
 
-        # Zwrócenie sukcesu
-        return str(playlist_id), 201
 
-    except Exception as e:
-        # Obsługa niespodziewanych błędów
-        return {"error": f"Unexpected error: {str(e)}"}, 500
 
 ##############################################################################
 
@@ -149,7 +116,7 @@ def update_recommendations():
 @model_blueprint.route("/check", methods=["POST"])
 def mock_test():
     data = request.get_json()
-    return jsonify(recommend_more(data["id"])), 201
+    return test_tree_accuracy()
 
 
 # Pobieranie użytkowników
