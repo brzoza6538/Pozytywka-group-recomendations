@@ -4,7 +4,7 @@ from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 
 
-# TODO - sometimes PATCH gives nothing? data overlay? 
+# TODO - sometimes PATCH gives nothing? empty recommendation?
 
 def get_tracks_without_mentioned_by_ids(track_ids):
     tracks = Track.query.filter(~Track.track_id.in_(track_ids)).all()
@@ -14,11 +14,10 @@ def get_tracks_without_mentioned_by_ids(track_ids):
 
     return [{
         **track.to_dict(),
-        "artist_id": artist_id_to_int[track.artist_id],  # Konwersja artist_id na int
+        "artist_id": artist_id_to_int[track.artist_id],
     } for track in tracks]
 
 def get_tracks_and_reactions_for_playlist(playlist_id):
-    # Pobieramy rekomendacje, utwory i artystów
     recommendations = (
         db.session.query(Recommendation, Track, Artist)
         .join(Track, Track.track_id == Recommendation.track_id)
@@ -51,7 +50,10 @@ class UpdateGroupReccomendations:
     def get(self):
         return self.recommended_tracks 
 
-    def prepare_data_for_prediction(self, data):
+    def prepare_features(self, data):
+        '''
+        get features of given data tracks 
+        '''
         X = []
         
         for entry in data:
@@ -65,9 +67,13 @@ class UpdateGroupReccomendations:
         return np.array(X)
 
     def predict(self, data, test_data):
-        X = self.prepare_data_for_prediction(data)
+        '''
+        method predicting if test_data would be classified as skip or add 
+        to the recommendations playlist using LinearSVC
+        '''
+        X = self.prepare_features(data)
 
-        test_data = self.prepare_data_for_prediction(test_data)
+        test_data = self.prepare_features(test_data)
 
         y = np.array([entry["reaction"] for entry in data])
 
@@ -79,14 +85,15 @@ class UpdateGroupReccomendations:
         return predictions
 
     def recommend_more(self):
+        '''
+        main method creating tracks for class, connecting all methods 
+        '''
         data = get_tracks_and_reactions_for_playlist(self.playlist_id)
 
         track_ids = {track['track_id'] for track in data}
         track_ids = list(track_ids)
 
         propositions = get_tracks_without_mentioned_by_ids(track_ids)
-
-        # Zwracamy prognozy
 
         predictions = self.predict(data, propositions)
 

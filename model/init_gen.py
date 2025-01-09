@@ -3,11 +3,11 @@ from models import Recommendation, User, Track, Session, db
 from datetime import datetime, timedelta
 
 from sklearn.cluster import KMeans
-from sklearn.preprocessing import LabelEncoder
 from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics.pairwise import cosine_similarity
+
 import numpy as np
 
-from sklearn.metrics.pairwise import cosine_similarity
 from collections import Counter
 
 import random
@@ -183,7 +183,7 @@ class GroupReccomendations:
 
    def recommend_tracks_for_cluster(self, tracks_data):
       '''
-      recommend tracks for each individual cluster
+      recommend tracks for each individual cluster based on how "close" they are to the average of a group
       '''
       liked_tracks_ids = [track["track_id"] for track in tracks_data]
       propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
@@ -203,7 +203,7 @@ class GroupReccomendations:
 
    def evaluate_tracks(self, train_data, test_data):
       '''
-      predict score of songs in test_data based on weighted train_data using SVM
+      predict score of songs in test_data based on weighted train_data using decision tree
       '''
       train_tracks = [get_tracks_by_ids([track_id])[0] for track_id in train_data.keys()]
       features_list = self.prepare_features_without_discrete(train_tracks)
@@ -237,7 +237,7 @@ class GroupReccomendations:
       '''
       TODO - move somewhere else 
 
-      used to test accuracy of SVM based scores 
+      used to test accuracy of decision tree based scores 
       '''
       users_id = [101,
       202, 303, 404, 505, 606, 707, 808, 909,
@@ -272,7 +272,7 @@ class GroupReccomendations:
 
    def create_recommendations(self):
       '''
-      main function creating tracks for class 
+      main method creating tracks for class, connecting all methods 
       '''
 
       tracks_ids = self.get_top_tracks()
@@ -288,7 +288,7 @@ class GroupReccomendations:
       data = {}
       for user_id in self.user_ids:
          predictions = self.evaluate_tracks(self.get_weighed_tracks(user_id), recommendations)
-         data = {key: data.get(key, 0) + predictions.get(key, 0) for key in data | predictions} # predict score of each recommended track for each user using SVM
+         data = {key: data.get(key, 0) + predictions.get(key, 0) for key in data | predictions} # predict score of each recommended track for each user using decision tree
 
       recommendations = sorted(data, key=data.get, reverse=True)[:self.FINAL_PLAYLIST_LENGTH] 
 
