@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request, render_template
 from models import Recommendation, Artist, User, Track, Session, db
 import random
-from model.init_gen import recommend_for_group, test_tree_accuracy
+from model.init_gen import GroupReccomendations
 from model.active_gen import recommend_more
 import uuid
 
@@ -67,7 +67,7 @@ def create_recommendation():
 
     users_ids = request.get_json()
 
-    track_ids = recommend_for_group(users_ids)
+    track_ids = GroupReccomendations(users_ids).recommendations
 
     playlist_id = str(uuid.uuid4())[:22]
     for track in track_ids:
@@ -78,7 +78,7 @@ def create_recommendation():
     return str(playlist_id), 201
 
 
-###############################################################################
+
 
 @model_blueprint.route("/adapt", methods=["PATCH"])
 def update_recommendations():
@@ -105,12 +105,6 @@ def update_recommendations():
     db.session.commit()
 
     return str(playlist_id), 201
-
-
-
-##############################################################################
-
-
 
 
 @model_blueprint.route("/check", methods=["POST"])
