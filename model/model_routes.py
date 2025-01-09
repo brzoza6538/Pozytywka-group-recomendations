@@ -110,7 +110,10 @@ def update_recommendations():
 @model_blueprint.route("/check", methods=["POST"])
 def mock_test():
     data = request.get_json()
-    return test_tree_accuracy()
+
+    track_ids = GroupReccomendations(data).test_clusters()
+
+    return track_ids
 
 
 
