@@ -44,92 +44,98 @@ def get_type_of_tracks(user_id, time_border, event_type):
    return user_records
 
 
-def prepare_features(tracks_data):
-   '''
-   get features of tracks with artist_id 
-   '''
-   features = []
-   for track in tracks_data:
-      feature_vector = [
-         track["danceability"],
-         track["energy"],
-         track["loudness"],
-         track["speechiness"],
-         track["acousticness"],
-         track["instrumentalness"],
-         track["liveness"],
-         track["valence"],
-         track["tempo"],
-         track["artist_id"]
-      ]
-      features.append(feature_vector)
-   return np.array(features)
-
-def prepare_features_without_discrete(tracks_data):
-   '''
-   get features of tracks without artist_id or other discrete columns
-   '''
-   features = []
-   for track in tracks_data:
-      feature_vector = [
-         track["danceability"],
-         track["energy"],
-         track["loudness"],
-         track["speechiness"],
-         track["acousticness"],
-         track["instrumentalness"],
-         track["liveness"],
-         track["valence"],
-         track["tempo"],
-      ]
-      features.append(feature_vector)
-   return np.array(features)
-
-def encode_artist_ids(tracks_data):
-   '''
-   turn artist_id into unique for given set int value
-   '''
-   unique_artist_ids = {track['artist_id'] for track in tracks_data}
-   
-   artist_id_to_int = {artist_id: idx for idx, artist_id in enumerate(unique_artist_ids)}
-   
-   for track in tracks_data:
-      track['artist_id'] = artist_id_to_int[track['artist_id']]
-   
-   return tracks_data
-
 
 
 class GroupReccomendations:
    def __init__(self, user_ids):
-      self.TIME_BORDER = datetime.utcnow() - timedelta(days=90)
-      self.USERS_LIKED_TRACKS_AMOUNT = 100
-      self.CLUSTER_RECOMMENDATION = 10
-      self.TASTE_GROUPS = 5 #TODO zależne od ilości osób? 
+      self._time_border = datetime.utcnow() - timedelta(days=90)
+      self._users_favourite_tracks_amount = 100
+      self._cluster_recommendation = 10
+      self._taste_groups = 5 #TODO zależne od ilości osób? 
 
-      self.LIKED_WEIGHT = 5
-      self.SKIPPED_WEIGHT = -5
-      self.STARTED_WEIGHT = 4
+      self._liked_weight = 5
+      self._skipped_weight = -5
+      self._started_weight = 4
 
       self.FINAL_PLAYLIST_LENGTH = 30
 
       self.user_ids = user_ids
-      self.create_recommendations()
+
+      self.recommendations = self.create_recommendations()
+
+   def get(self):
+      return self.recommendations
+
+   def prepare_features(self, tracks_data):
+      '''
+      get features of tracks with artist_id 
+      '''
+      features = []
+      for track in tracks_data:
+         feature_vector = [
+            track["danceability"],
+            track["energy"],
+            track["loudness"],
+            track["speechiness"],
+            track["acousticness"],
+            track["instrumentalness"],
+            track["liveness"],
+            track["valence"],
+            track["tempo"],
+            track["artist_id"]
+         ]
+         features.append(feature_vector)
+      return np.array(features)
+
+   def prepare_features_without_discrete(self, tracks_data):
+      '''
+      get features of tracks without artist_id or other discrete columns
+      '''
+      features = []
+      for track in tracks_data:
+         feature_vector = [
+            track["danceability"],
+            track["energy"],
+            track["loudness"],
+            track["speechiness"],
+            track["acousticness"],
+            track["instrumentalness"],
+            track["liveness"],
+            track["valence"],
+            track["tempo"],
+         ]
+         features.append(feature_vector)
+      return np.array(features)
+
+   def encode_artist_ids(self, tracks_data):
+      '''
+      turn artist_id into unique for given set int value
+      '''
+      unique_artist_ids = {track['artist_id'] for track in tracks_data}
+      
+      artist_id_to_int = {artist_id: idx for idx, artist_id in enumerate(unique_artist_ids)}
+      
+      for track in tracks_data:
+         track['artist_id'] = artist_id_to_int[track['artist_id']]
+      
+      return tracks_data
+
+
 
 
    def get_weighed_tracks(self, user_id):
       '''
       score songs of a user with given user_id
       '''
-      started_tracks = get_type_of_tracks(user_id, self.TIME_BORDER, "play")
-      skipped_tracks = get_type_of_tracks(user_id, self.TIME_BORDER, "skip")
-      liked_tracks = get_type_of_tracks(user_id, self.TIME_BORDER, "like")
+      started_tracks = get_type_of_tracks(user_id, self._time_border, "play")
+      skipped_tracks = get_type_of_tracks(user_id, self._time_border, "skip")
+      liked_tracks = get_type_of_tracks(user_id, self._time_border, "like")
 
       for track_id in started_tracks.keys():
          record = (
-            started_tracks.get(track_id, 0) * self.STARTED_WEIGHT +
-            skipped_tracks.get(track_id, 0) * self.SKIPPED_WEIGHT +
-            liked_tracks.get(track_id, 0) * self.LIKED_WEIGHT 
+            started_tracks.get(track_id, 0) * self._started_weight +
+            skipped_tracks.get(track_id, 0) * self._skipped_weight +
+            liked_tracks.get(track_id, 0) * self._liked_weight 
          )
          started_tracks[track_id] = 1 / (1 + np.exp(-record))
 
@@ -151,7 +157,7 @@ class GroupReccomendations:
                connected_scores[track_id] += user_scores[track_id]
 
       sorted_items = sorted(connected_scores.items(), key=lambda item: item[1], reverse=True)
-      top_tracks = [track_id for track_id, score in sorted_items[:self.USERS_LIKED_TRACKS_AMOUNT]]
+      top_tracks = [track_id for track_id, score in sorted_items[:self._users_favourite_tracks_amount]]
       return top_tracks
 
 
@@ -159,15 +165,15 @@ class GroupReccomendations:
       '''
       group most liked music of users using Kmeans
       '''
-      tracks_data = encode_artist_ids(tracks_data)
+      tracks_data = self.encode_artist_ids(tracks_data)
 
-      features = prepare_features(tracks_data)
+      features = self.prepare_features(tracks_data)
 
-      kmeans = KMeans(n_clusters=self.TASTE_GROUPS)
+      kmeans = KMeans(n_clusters=self._taste_groups)
       clusters = kmeans.fit_predict(features)
 
 
-      result = [[] for _ in range(self.TASTE_GROUPS)]  
+      result = [[] for _ in range(self._taste_groups)]  
 
       for i, track in enumerate(tracks_data):
          result[clusters[i]].append(track)
@@ -182,8 +188,8 @@ class GroupReccomendations:
       liked_tracks_ids = [track["track_id"] for track in tracks_data]
       propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
       
-      liked_tracks_features = prepare_features_without_discrete(tracks_data)
-      propositions_features = prepare_features_without_discrete(propositions_pool)
+      liked_tracks_features = self.prepare_features_without_discrete(tracks_data)
+      propositions_features = self.prepare_features_without_discrete(propositions_pool)
 
       average_features = np.mean(liked_tracks_features, axis=0)
 
@@ -191,7 +197,7 @@ class GroupReccomendations:
       
       propositions_with_similarity = [(track, similarity[0]) for track, similarity in zip(propositions_pool, similarities)]
       propositions_with_similarity.sort(key=lambda x: x[1], reverse=True)
-      recommended_tracks = [track["track_id"] for track, _ in propositions_with_similarity[:self.CLUSTER_RECOMMENDATION]]
+      recommended_tracks = [track["track_id"] for track, _ in propositions_with_similarity[:self._cluster_recommendation]]
       
       return recommended_tracks
 
@@ -200,7 +206,7 @@ class GroupReccomendations:
       predict score of songs in test_data based on weighted train_data using SVM
       '''
       train_tracks = [get_tracks_by_ids([track_id])[0] for track_id in train_data.keys()]
-      features_list = prepare_features_without_discrete(train_tracks)
+      features_list = self.prepare_features_without_discrete(train_tracks)
       labels = list(train_data.values())
 
       tree = DecisionTreeRegressor(max_depth=5)
@@ -284,6 +290,6 @@ class GroupReccomendations:
          predictions = self.evaluate_tracks(self.get_weighed_tracks(user_id), recommendations)
          data = {key: data.get(key, 0) + predictions.get(key, 0) for key in data | predictions} # predict score of each recommended track for each user using SVM
 
-      recommendation = sorted(data, key=data.get, reverse=True)[:self.FINAL_PLAYLIST_LENGTH] 
+      recommendations = sorted(data, key=data.get, reverse=True)[:self.FINAL_PLAYLIST_LENGTH] 
 
-      self.recommendations = recommendation
+      return recommendations

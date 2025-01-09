@@ -3,7 +3,8 @@ from models import Recommendation, Artist, User, Track, Session, db
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 
-BATCH_SIZE = 10
+
+# TODO - sometimes PATCH gives nothing? data overlay? 
 
 def get_tracks_without_mentioned_by_ids(track_ids):
     tracks = Track.query.filter(~Track.track_id.in_(track_ids)).all()
@@ -39,49 +40,58 @@ def get_tracks_and_reactions_for_playlist(playlist_id):
         for recommendation, track, _ in recommendations
     ]
 
-def prepare_data_for_prediction(data):
-    X = []
-    
-    for entry in data:
-        features = [
-            entry["acousticness"], entry["artist_id"], entry["danceability"], entry["duration_ms"], entry["energy"], 
-            entry["instrumentalness"], entry["key"], entry["liveness"], entry["loudness"], entry["popularity"], 
-            entry["release_date"], entry["speechiness"], entry["tempo"], entry["valence"]
+
+
+class UpdateGroupReccomendations:
+    def __init__(self, playlist_id):
+        self.playlist_id = playlist_id
+        self._batch_size = 10
+        self.recommended_tracks = self.recommend_more()
+
+    def get(self):
+        return self.recommended_tracks 
+
+    def prepare_data_for_prediction(self, data):
+        X = []
+        
+        for entry in data:
+            features = [
+                entry["acousticness"], entry["artist_id"], entry["danceability"], entry["duration_ms"], entry["energy"], 
+                entry["instrumentalness"], entry["key"], entry["liveness"], entry["loudness"], entry["popularity"], 
+                entry["release_date"], entry["speechiness"], entry["tempo"], entry["valence"]
+            ]
+            X.append(features)
+        
+        return np.array(X)
+
+    def predict(self, data, test_data):
+        X = self.prepare_data_for_prediction(data)
+
+        test_data = self.prepare_data_for_prediction(test_data)
+
+        y = np.array([entry["reaction"] for entry in data])
+
+        model = LinearSVC(max_iter=100)
+        model.fit(X, y)
+
+        predictions = model.predict(test_data)
+
+        return predictions
+
+    def recommend_more(self):
+        data = get_tracks_and_reactions_for_playlist(self.playlist_id)
+
+        track_ids = {track['track_id'] for track in data}
+        track_ids = list(track_ids)
+
+        propositions = get_tracks_without_mentioned_by_ids(track_ids)
+
+        # Zwracamy prognozy
+
+        predictions = self.predict(data, propositions)
+
+        recommended_tracks = [
+            propositions[i]['track_id'] for i in range(len(predictions)) if predictions[i] == 1
         ]
-        X.append(features)
-    
-    return np.array(X)
 
-def predict(data, test_data):
-    X = prepare_data_for_prediction(data)
-
-    test_data = prepare_data_for_prediction(test_data)
-
-    y = np.array([entry["reaction"] for entry in data])
-
-    model = LinearSVC(max_iter=100)
-    model.fit(X, y)
-
-    predictions = model.predict(test_data)
-
-    return predictions
-
-
-
-def recommend_more(playlist_id):
-    data = get_tracks_and_reactions_for_playlist(playlist_id)
-
-    track_ids = {track['track_id'] for track in data}
-    track_ids = list(track_ids)
-
-    propositions = get_tracks_without_mentioned_by_ids(track_ids)
-
-    # Zwracamy prognozy
-
-    predictions = predict(data, propositions)
-
-    recommended_tracks = [
-        propositions[i]['track_id'] for i in range(len(predictions)) if predictions[i] == 1
-    ]
-
-    return recommended_tracks[:BATCH_SIZE]
+        return recommended_tracks[:self._batch_size]

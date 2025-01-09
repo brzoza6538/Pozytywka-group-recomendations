@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, request, render_template
 from models import Recommendation, Artist, User, Track, Session, db
 import random
 from model.init_gen import GroupReccomendations
-from model.active_gen import recommend_more
+from model.active_gen import UpdateGroupReccomendations
 import uuid
 
 
@@ -67,7 +67,7 @@ def create_recommendation():
 
     users_ids = request.get_json()
 
-    track_ids = GroupReccomendations(users_ids).recommendations
+    track_ids = GroupReccomendations(users_ids).get()
 
     playlist_id = str(uuid.uuid4())[:22]
     for track in track_ids:
@@ -94,7 +94,7 @@ def update_recommendations():
 
 
 
-    track_ids = recommend_more(playlist_id)
+    track_ids = UpdateGroupReccomendations(playlist_id).get()
 
     for track in track_ids:
         existing_recommendation = Recommendation.query.filter_by(playlist_id=playlist_id, track_id=track).first()
