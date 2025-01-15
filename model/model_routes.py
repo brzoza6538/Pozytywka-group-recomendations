@@ -1,71 +1,140 @@
 from flask import Blueprint, jsonify, request, render_template
 from models import Recommendation, Artist, User, Track, Session, db
 import random
+from model.init_gen import GroupReccomendations
+from model.active_gen import UpdateGroupReccomendations
+import uuid
+
 
 model_blueprint = Blueprint("recommendation", __name__)
 
-
-def get_recommendations_by_playlist_id(playlist_id):
-    reccommendations = Recommendation.query.filter(Recommendation.playlist_id == playlist_id and Recommendation.reaction == None).all()
-    return reccommendations
 
 @model_blueprint.route('/')
 def index():
     return render_template('index.html')
 
-@model_blueprint.route("/recommend/<playlist_id>", methods=["GET"])
-def get_recommendation(playlist_id):
+@model_blueprint.route("/recommended_playlist/<playlist_id>", methods=["GET"])
+def get_recommended_playlist(playlist_id):
     recommendations = (
-        Recommendation.query
-        .filter(Recommendation.playlist_id == playlist_id)
-        .order_by(Recommendation.id.desc()) 
-        .limit(3)
+        db.session.query(Recommendation, Track, Artist)
+        .join(Track, Track.track_id == Recommendation.track_id) 
+        .join(Artist, Artist.id == Track.artist_id) 
+        .filter(Recommendation.playlist_id == playlist_id, Recommendation.reaction == True)
+        .order_by(Recommendation.id.desc())
         .all()
     )
 
-    return jsonify([recommendation.to_dict() for recommendation in recommendations])
+    return jsonify([
+        {
+            "reaction": recommendation.reaction,
+            "id": recommendation.id,
+            "playlist_id": recommendation.playlist_id,
+            "track_name": track.name,
+            "artist_name": artist.name,
+            "track_id": track.track_id
+        }
+        for recommendation, track, artist in recommendations
+    ])
+
+
+@model_blueprint.route("/recommend/<playlist_id>", methods=["GET"])
+def get_recommendation(playlist_id):
+    recommendations = (
+        db.session.query(Recommendation, Track, Artist)
+        .join(Track, Track.track_id == Recommendation.track_id) 
+        .join(Artist, Artist.id == Track.artist_id) 
+        .filter(Recommendation.playlist_id == playlist_id, Recommendation.reaction == None)
+        .order_by(Recommendation.id.desc())
+        .all()
+    )
+
+    return jsonify([
+        {
+            "reaction": recommendation.reaction,
+            "id": recommendation.id,
+            "playlist_id": recommendation.playlist_id,
+            "track_name": track.name,
+            "artist_name": artist.name,
+            "track_id": track.track_id
+        }
+        for recommendation, track, artist in recommendations
+    ])
 
 
 @model_blueprint.route("/recommend", methods=["POST"])
 def create_recommendation():
-    users_id = []
+    users_ids = []
 
-    data = request.get_json()
-    for line in data:
-        users_id.append(line["user_id"])
+    users_ids = request.get_json()
 
+    track_ids = GroupReccomendations(users_ids).get()
 
-
-#MOCK 
-    # for i in range(10):
-    #     for j in range(i):
-    #         new_recommendation = Recommendation(playlist_id=i, track_id=j)
-    #         db.session.add(new_recommendation)
-    #         db.session.commit()
-
-
-    playlist_id = 7
+    playlist_id = str(uuid.uuid4())[:22]
+    for track in track_ids:
+        new_recommendation = Recommendation(playlist_id=playlist_id, track_id=track)
+        db.session.add(new_recommendation)
+    db.session.commit()
 
     return str(playlist_id), 201
-
 
 
 
 
 @model_blueprint.route("/adapt", methods=["PATCH"])
-def update_recomendations():
-    reviews = {}
-    
+def update_recommendations():
     data = request.get_json()
-    for line in data:
-        reviews[line["recommendation_id"]] = bool(line["checked"])
+    playlist_id = data.get("playlist_id")
+
+    for line in data['selectedRecommendations']:
+        recommendation_id = line.get("recommendation_id")
+        recommendation = Recommendation.query.get(recommendation_id)
+
+        recommendation.reaction = bool(line.get("checked"))
+    db.session.commit()
 
 
-    playlist_id = random.randint(6, 8)
+
+    track_ids = UpdateGroupReccomendations(playlist_id).get()
+
+    for track in track_ids:
+        existing_recommendation = Recommendation.query.filter_by(playlist_id=playlist_id, track_id=track).first()
+        if not existing_recommendation:
+            new_recommendation = Recommendation(playlist_id=playlist_id, track_id=track)
+            db.session.add(new_recommendation)
+
+    db.session.commit()
 
     return str(playlist_id), 201
 
 
-#PATCH nie zmienia kolejności
+@model_blueprint.route("/check", methods=["POST"])
+def mock_test():
+    data = request.get_json()
+
+    track_ids = GroupReccomendations(data).test_clusters()
+
+    return track_ids
 
 
+
+
+
+@model_blueprint.route('/users', methods=['GET'])
+def get_users():
+    users = User.query.all()
+    return jsonify([user.to_dict() for user in users]), 200
+
+@model_blueprint.route('/sessions', methods=['GET'])
+def get_sessions():
+    sessions = Session.query.all()
+    return jsonify([session.to_dict() for session in sessions]), 200
+
+@model_blueprint.route('/tracks', methods=['GET'])
+def get_tracks():
+    tracks = Track.query.all()
+    return jsonify([track.to_dict() for track in tracks]), 200
+
+@model_blueprint.route('/artists', methods=['GET'])
+def get_artists():
+    artists = Artist.query.all()
+    return jsonify([artist.to_dict() for artist in artists]), 200
