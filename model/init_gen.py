@@ -1,4 +1,3 @@
-from flask import Blueprint, request, render_template
 from models import Recommendation, User, Track, Session, Artist, db
 from datetime import datetime, timedelta
 
@@ -52,20 +51,21 @@ def get_type_of_tracks(user_id, time_border, event_type):
 
 class GroupReccomendations:
     def __init__(self, user_ids):
-       self._time_border = datetime.utcnow() - timedelta(days=90)
-       self._users_favourite_tracks_amount = 100
-       self._cluster_recommendation = 10
-       self._taste_groups = 4 #TODO zależne od ilości osób? 
+        self._time_border = datetime.utcnow() - timedelta(days=90)
+        self._users_favourite_tracks_amount = 10000 #100
+        self._cluster_recommendation = 100 #50
+        self._taste_groups = 30 #3 #TODO zależne od ilości osób? 
 
-       self._liked_weight = 5
-       self._skipped_weight = -5
-       self._started_weight = 4
+        self._liked_weight = 5
+        self._skipped_weight = -5
+        self._started_weight = 4
 
-       self._final_playlist_length = 30
+        self._final_playlist_length = 30
 
-       self.user_ids = user_ids
+        self.user_ids = user_ids
 
-       self.recommendations = self.create_recommendations()
+        self._test_tracks = []
+        self.recommendations = self.create_recommendations()
 
     def get(self):
         return self.recommendations
@@ -124,9 +124,6 @@ class GroupReccomendations:
 
         return tracks_data
 
-
-
-
     def get_weighed_tracks(self, user_id):
         '''
         score songs of a user with given user_id
@@ -142,10 +139,9 @@ class GroupReccomendations:
                 liked_tracks.get(track_id, 0) * self._liked_weight 
             )
             started_tracks[track_id] = 1 / (1 + np.exp(-record))
-
         return started_tracks
 
-    def get_top_tracks(self):
+    def get_top_tracks(self, test_size=0):
         '''
         get best regarded songs of users
         '''
@@ -161,7 +157,14 @@ class GroupReccomendations:
                     connected_scores[track_id] += user_scores[track_id]
 
         sorted_items = sorted(connected_scores.items(), key=lambda item: item[1], reverse=True)
-        top_tracks = [track_id for track_id, score in sorted_items[:self._users_favourite_tracks_amount]]
+        top_tracks = [track_id for track_id, score in sorted_items[:self._users_favourite_tracks_amount+test_size]]
+
+        for _ in range(test_size):  # test related
+            if top_tracks:
+                random_track = random.choice(top_tracks)
+                self._test_tracks.append(random_track) 
+                top_tracks.remove(random_track)  
+
         return top_tracks
 
 
@@ -235,22 +238,22 @@ class GroupReccomendations:
         '''
         liked_tracks_ids = [track["track_id"] for track in tracks_data]
         propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
-        
+       
         liked_tracks_features = self.prepare_features_without_discrete(tracks_data)
         propositions_features = self.prepare_features_without_discrete(propositions_pool)
 
         average_features = np.mean(liked_tracks_features, axis=0)
 
         similarities = cosine_similarity(propositions_features, [average_features])
-        
+    
         propositions_with_similarity = [(track, similarity[0]) for track, similarity in zip(propositions_pool, similarities)]
         propositions_with_similarity.sort(key=lambda x: x[1], reverse=True)
         recommended_tracks = [track["track_id"] for track, _ in propositions_with_similarity[:self._cluster_recommendation]]
-        
-        return recommended_tracks
-    
 
-    def evaluate_tracks(self, train_data, test_data):
+        return recommended_tracks
+
+
+    def evaluate_tracks(self, train_data, test_data, g_max_depth=10):
         '''
         predict score of songs in test_data based on weighted train_data using decision tree
         '''
@@ -258,7 +261,7 @@ class GroupReccomendations:
         features_list = self.prepare_features_without_discrete(train_tracks)
         labels = list(train_data.values())
 
-        tree = DecisionTreeRegressor(max_depth=5)
+        tree = DecisionTreeRegressor(max_depth=g_max_depth)
         tree.fit(features_list, labels)
 
         test_tracks = get_tracks_by_ids(test_data)
@@ -289,27 +292,29 @@ class GroupReccomendations:
         used to test accuracy of decision tree based scores 
         '''
         diff = []
+        depths = [5, 10, 20]
+        for depth in depths:
+            for user_id in self.user_ids:
 
-        results  = ""
+                train_data = self.get_weighed_tracks(user_id)
+                print(len(train_data))
 
-        for user_id in self.user_ids:
+                train_data = list(train_data.items())
 
-            train_data = self.get_weighed_tracks(user_id)
+                train_items, test_items = train_test_split(train_data, test_size=0.2, random_state=42)
 
-            train_data = dict(list(train_data.items())[20:])
-            test_data = dict(list(train_data.items())[:20])
+                train_data = dict(train_items)
+                test_data = dict(test_items)
 
+                tracks_data = [track_id for track_id in test_data.keys()]
 
-            tracks_data = [track_id for track_id in test_data.keys()]
+                prediction = self.evaluate_tracks(train_data, test_data, depth)
 
-            prediction = self.evaluate_tracks(train_data, test_data)
-
-            for track in tracks_data:
-                results += f" {track}  : {round(prediction[track], 3)} : {round(test_data.get(track, 0), 3)} ---- {round(abs(prediction[track] - test_data.get(track, 0)), 3)}\n"
-                diff.append(abs(prediction[track] - test_data.get(track, 0)))
-        results += f"\n\n\-------\n\n min :  {round(np.min(diff), 3)}\n max : {round(np.max(diff), 3)}\n ddelt ---- {round(np.mean(diff), 3)}\n\n\-------\n\n"
-        return str(results)
-
+                for track in tracks_data:
+                    # results += f"{round(prediction[track], 3)} : {round(test_data.get(track, 0), 3)} ---- {round(abs(prediction[track] - test_data.get(track, 0)), 3)}\n"
+                    diff.append(abs(prediction[track] - test_data.get(track, 0)))
+            print(f"------- \nmin :  {round(np.min(diff), 3)}\n max : {round(np.max(diff), 3)}\n ddelt ---- {round(np.mean(diff), 3)}\n")
+        return str("done")
 
 
     def create_recommendations(self):
@@ -334,4 +339,71 @@ class GroupReccomendations:
 
         recommendations = sorted(data, key=data.get, reverse=True)[:self._final_playlist_length] 
 
+        return recommendations
+
+
+
+    def test_create_recommendations(self):
+        '''
+        main method creating tracks for class, connecting all methods 
+        '''
+        #np. user 101 - 1136 piosenek, 303 - 415, 202 - 530 
+        users_favourite_tracks_amount_p = [1000, 100000]
+        cluster_recommendation_p = [100, 1000]
+        taste_groups_p = [30, 50]
+
+        records = []
+
+        self._final_playlist_length = 100
+        user_test_size = 100
+
+
+        for users_favourite_tracks_amount in users_favourite_tracks_amount_p:
+            for cluster_recommendation in cluster_recommendation_p:
+                for taste_groups in taste_groups_p:
+
+                    self._users_favourite_tracks_amount = users_favourite_tracks_amount
+                    self._cluster_recommendation = cluster_recommendation
+                    self._taste_groups = taste_groups 
+
+                    tracks_ids = self.get_top_tracks(user_test_size)
+                    # print(len(tracks_ids))
+
+                    print("\n-------------------------\n")
+
+                    tracks_data = get_tracks_by_ids(tracks_ids)
+
+                    track_clusters = self.cluster_tracks(tracks_data) # group most liked music of users using Kmeans
+
+                    recommendations = []
+
+                    for cluster in track_clusters:
+                        recommendations += self.recommend_tracks_for_cluster(cluster) # recommend tracks for each individual cluster
+                    
+                    data = {}
+                    for user_id in self.user_ids:
+                        predictions = self.evaluate_tracks(self.get_weighed_tracks(user_id), recommendations)
+                        data = {key: data.get(key, 0) + predictions.get(key, 0) for key in data | predictions} # predict score of each recommended track for each user using decision tree
+
+                    recommendations = sorted(data, key=data.get, reverse=True)[:self._final_playlist_length] 
+
+                    duplicates = 0
+                    for track in recommendations:
+                        if(track in self._test_tracks):
+                            duplicates += 1
+                    if (duplicates/len(recommendations) >= 0):
+                        records.append((f"{self._users_favourite_tracks_amount}  - {self._cluster_recommendation} - {self._taste_groups}", {round(duplicates/len(recommendations), 4)}))
+
+                    print(duplicates)
+                    print(len(recommendations))
+                    
+                    print(f"{self._users_favourite_tracks_amount}  - {self._cluster_recommendation} - {self._taste_groups}")
+
+
+        print("\n\n\n------------------\n\n\n\n")
+        sorted_records = sorted(records, key=lambda record: next(iter(record[1])))
+        for record in sorted_records:
+            print(record)
+
+        
         return recommendations

@@ -12,4 +12,4 @@ RUN gunzip -k data/*.gz
 
 
 # Uruchamianie aplikacji
-CMD ["python", "app.py"]
+CMD ["python", "-u", "app.py"]

@@ -111,7 +111,7 @@ def update_recommendations():
 def mock_test():
     data = request.get_json()
 
-    track_ids = GroupReccomendations(data).test_clusters()
+    track_ids = GroupReccomendations(data).test_create_recommendations()
 
     return track_ids
 
