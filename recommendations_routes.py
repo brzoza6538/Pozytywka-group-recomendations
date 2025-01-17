@@ -12,7 +12,9 @@ recommendations_blueprint = Blueprint("recommendation", __name__)
 def create_recommendation():
     users_ids = request.get_json()
 
-    track_ids = (requests.post(f"{recommendation_url}/recommend", json=users_ids)).json()
+    track_ids = (
+        requests.post(f"{recommendation_url}/recommend", json=users_ids)
+    ).json()
 
     playlist_id = str(uuid.uuid4())[:22]
     for track in track_ids:
@@ -35,10 +37,14 @@ def update_recommendations():
         recommendation.reaction = bool(line.get("checked"))
     db.session.commit()
 
-    track_ids = (requests.post(f"{recommendation_url}/update_recommendation", json=playlist_id)).json()
+    track_ids = (
+        requests.post(f"{recommendation_url}/update_recommendation", json=playlist_id)
+    ).json()
 
     for track in track_ids:
-        existing_recommendation = Recommendation.query.filter_by(playlist_id=playlist_id, track_id=track).first()
+        existing_recommendation = Recommendation.query.filter_by(
+            playlist_id=playlist_id, track_id=track
+        ).first()
         if not existing_recommendation:
             new_recommendation = Recommendation(playlist_id=playlist_id, track_id=track)
             db.session.add(new_recommendation)
@@ -55,5 +61,3 @@ def mock_test():
     track_ids = (requests.post(f"{recommendation_url}/test", json=data)).json()
 
     return jsonify(track_ids)
-
-

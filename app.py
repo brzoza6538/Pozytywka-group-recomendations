@@ -1,13 +1,14 @@
 from flask import Flask
 import os
 import json
-from models import db, User, Artist, Session, Track, Recommendation
+from models import db, User, Artist, Session, Track
 from app_routes import app_blueprint
 from recommendations_routes import recommendations_blueprint
 
-from models import Artist, Track, Session, User, Recommendation, db  # poprawny import z app
 import requests
+
 recommendation_url = "http://recommendation:8001/"
+
 
 def clear_database():
     db.session.query(User).delete()
@@ -15,6 +16,7 @@ def clear_database():
     db.session.query(Session).delete()
     db.session.query(Track).delete()
     db.session.commit()
+
 
 def load_data_from_jsonl(file_path, dataType):
     if os.path.exists(file_path):
@@ -31,10 +33,10 @@ def load_data_from_jsonl(file_path, dataType):
         raise Exception(f"{file_path} : file not found")
 
 
-
 def call_random_microservice():
     response = requests.get(f"{recommendation_url}/generate")
     return response.json().get("random_number")
+
 
 def create_app():
     app = Flask(__name__)
@@ -61,18 +63,13 @@ def create_app():
         if User.query.count() == 0:
             load_data_from_jsonl("data/users.jsonl", User)
 
+    # /recommend_tracks = GroupReccomendations(users_ids).get()
+    # /update_recommendations = UpdateGroupReccomendations(playlist_id).get()
+    # /test = GroupReccomendations(data).test_create_recommendations()
 
-# /recommend_tracks = GroupReccomendations(users_ids).get()
-# /update_recommendations = UpdateGroupReccomendations(playlist_id).get()
-# /test = GroupReccomendations(data).test_create_recommendations()
- 
     return app
 
 
 if __name__ == "__main__":
     app = create_app()
     app.run(host='0.0.0.0', port=8000)
-
-
-
-

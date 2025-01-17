@@ -1,9 +1,9 @@
 from flask import Blueprint, jsonify, request, render_template
-from models import Artist, User, Track, Session, db
 from models import db, User, Artist, Session, Track, Recommendation
 from datetime import datetime
 
 app_blueprint = Blueprint("data", __name__)
+
 
 @app_blueprint.route("/users", methods=["GET"])
 def get_users():
@@ -18,7 +18,9 @@ def get_tracks_by_ids():
     tracks = []
 
     for track_id in track_ids:
-        tracks.append((Track.query.filter(Track.track_id == track_id).first()).to_dict())
+        tracks.append(
+            (Track.query.filter(Track.track_id == track_id).first()).to_dict()
+        )
     return tracks
 
 
@@ -38,25 +40,22 @@ def get_type_of_tracks():
     from_time = datetime.fromisoformat(from_time)
     to_time = datetime.fromisoformat(to_time)
 
-    sessions = (
-        Session.query
-        .filter(
-            (Session.user_id == user_id) & 
-            (Session.event_type == event_type) &
-            (Session.timestamp > from_time) &
-            (Session.timestamp <= to_time)
-        )
-        .all()
-    )
+    sessions = Session.query.filter(
+        (Session.user_id == user_id) &
+        (Session.event_type == event_type) &
+        (Session.timestamp > from_time) &
+        (Session.timestamp <= to_time)
+    ).all()
 
     user_records = {}
 
     for session in sessions:
-        if (session.track_id not in user_records.keys()):
+        if session.track_id not in user_records.keys():
             user_records[session.track_id] = 0
         user_records[session.track_id] += 1
-    
+
     return user_records
+
 
 @app_blueprint.route("/tracks_of_playlist", methods=["POST"])
 def get_tracks_and_reactions_for_playlist():
@@ -72,10 +71,7 @@ def get_tracks_and_reactions_for_playlist():
     )
 
     return [
-        {
-            **track.to_dict(),
-            "reaction": int(recommendation.reaction)  
-        }
+        {**track.to_dict(), "reaction": int(recommendation.reaction)}
         for recommendation, track, _ in recommendations
     ]
 
@@ -89,45 +85,53 @@ def index():
 def get_recommended_playlist(playlist_id):
     recommendations = (
         db.session.query(Recommendation, Track, Artist)
-        .join(Track, Track.track_id == Recommendation.track_id) 
-        .join(Artist, Artist.id == Track.artist_id) 
-        .filter(Recommendation.playlist_id == playlist_id, Recommendation.reaction == True)
+        .join(Track, Track.track_id == Recommendation.track_id)
+        .join(Artist, Artist.id == Track.artist_id)
+        .filter(
+            Recommendation.playlist_id == playlist_id, Recommendation.reaction == True
+        )
         .order_by(Recommendation.id.desc())
         .all()
     )
 
-    return jsonify([
-        {
-            "reaction": recommendation.reaction,
-            "id": recommendation.id,
-            "playlist_id": recommendation.playlist_id,
-            "track_name": track.name,
-            "artist_name": artist.name,
-            "track_id": track.track_id
-        }
-        for recommendation, track, artist in recommendations
-    ])
+    return jsonify(
+        [
+            {
+                "reaction": recommendation.reaction,
+                "id": recommendation.id,
+                "playlist_id": recommendation.playlist_id,
+                "track_name": track.name,
+                "artist_name": artist.name,
+                "track_id": track.track_id,
+            }
+            for recommendation, track, artist in recommendations
+        ]
+    )
 
 
 @app_blueprint.route("/recommend/<playlist_id>", methods=["GET"])
 def get_recommendation(playlist_id):
     recommendations = (
         db.session.query(Recommendation, Track, Artist)
-        .join(Track, Track.track_id == Recommendation.track_id) 
-        .join(Artist, Artist.id == Track.artist_id) 
-        .filter(Recommendation.playlist_id == playlist_id, Recommendation.reaction == None)
+        .join(Track, Track.track_id == Recommendation.track_id)
+        .join(Artist, Artist.id == Track.artist_id)
+        .filter(
+            Recommendation.playlist_id == playlist_id, Recommendation.reaction == None
+        )
         .order_by(Recommendation.id.desc())
         .all()
     )
 
-    return jsonify([
-        {
-            "reaction": recommendation.reaction,
-            "id": recommendation.id,
-            "playlist_id": recommendation.playlist_id,
-            "track_name": track.name,
-            "artist_name": artist.name,
-            "track_id": track.track_id
-        }
-        for recommendation, track, artist in recommendations
-    ])
+    return jsonify(
+        [
+            {
+                "reaction": recommendation.reaction,
+                "id": recommendation.id,
+                "playlist_id": recommendation.playlist_id,
+                "track_name": track.name,
+                "artist_name": artist.name,
+                "track_id": track.track_id,
+            }
+            for recommendation, track, artist in recommendations
+        ]
+    )

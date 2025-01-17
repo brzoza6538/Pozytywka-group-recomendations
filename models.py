@@ -3,6 +3,7 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
+
 class User(db.Model):
     user_id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
@@ -12,11 +13,11 @@ class User(db.Model):
     premium_user = db.Column(db.Boolean, nullable=False)
 
     def __init__(self, data):
-        self.user_id=data["user_id"]
-        self.name=data["name"]
-        self.city=data["city"]
-        self.street=data["street"]
-        self.premium_user=data["premium_user"]
+        self.user_id = data["user_id"]
+        self.name = data["name"]
+        self.city = data["city"]
+        self.street = data["street"]
+        self.premium_user = data["premium_user"]
         self.favourite_genres = ';'.join(data["favourite_genres"])
 
     def get_favourite_genres(self):
@@ -29,14 +30,14 @@ class User(db.Model):
             "city": self.city,
             "street": self.street,
             "favourite_genres": self.get_favourite_genres(),
-            "premium_user": self.premium_user
+            "premium_user": self.premium_user,
         }
 
 
 class Artist(db.Model):
     id = db.Column(db.String(22), primary_key=True)
     name = db.Column(db.String(80), nullable=False)
-    genres = db.Column(db.String(255), nullable=False) 
+    genres = db.Column(db.String(255), nullable=False)
 
     def __init__(self, data):
         self.id = data["id"]
@@ -46,35 +47,28 @@ class Artist(db.Model):
     def get_genres(self):
         return self.genres.split(';') if self.genres else []
 
-
     def to_dict(self):
-        return {
-            "id": self.id,
-            "name": self.name,
-            "genres": self.get_genres()
-        }
-
-
+        return {"id": self.id, "name": self.name, "genres": self.get_genres()}
 
 
 class Track(db.Model):
     track_id = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(80), nullable=False)  
-    popularity = db.Column(db.Integer, nullable=False)      # 0-100
-    duration_ms = db.Column(db.Integer, nullable=False)  
-    explicit = db.Column(db.Boolean, nullable=False)  
+    name = db.Column(db.String(80), nullable=False)
+    popularity = db.Column(db.Integer, nullable=False)  # 0-100
+    duration_ms = db.Column(db.Integer, nullable=False)
+    explicit = db.Column(db.Boolean, nullable=False)
     artist_id = db.Column(db.String(22), nullable=False)
-    release_date = db.Column(db.Integer, nullable=False)     #year only
-    danceability = db.Column(db.Float, nullable=False)       #0.0 - 1.0
-    energy = db.Column(db.Float, nullable=False)             #0.0 - 1.0
-    key = db.Column(db.Integer, nullable=False)              #0-11
-    loudness = db.Column(db.Float, nullable=False)           #-60 - 0
-    speechiness = db.Column(db.Float, nullable=False)        #0.0 - 1.0
-    acousticness = db.Column(db.Float, nullable=False)       #0.0 - 1.0
-    instrumentalness = db.Column(db.Float, nullable=False)   #0.0 - 1.0
-    liveness = db.Column(db.Float, nullable=False)           #0.0 - 1.0 
-    valence = db.Column(db.Float, nullable=False)            #0.0 - 1.0
-    tempo = db.Column(db.Float, nullable=False)              
+    release_date = db.Column(db.Integer, nullable=False)  # year only
+    danceability = db.Column(db.Float, nullable=False)  # 0.0 - 1.0
+    energy = db.Column(db.Float, nullable=False)  # 0.0 - 1.0
+    key = db.Column(db.Integer, nullable=False)  # 0-11
+    loudness = db.Column(db.Float, nullable=False)  # -60 - 0
+    speechiness = db.Column(db.Float, nullable=False)  # 0.0 - 1.0
+    acousticness = db.Column(db.Float, nullable=False)  # 0.0 - 1.0
+    instrumentalness = db.Column(db.Float, nullable=False)  # 0.0 - 1.0
+    liveness = db.Column(db.Float, nullable=False)  # 0.0 - 1.0
+    valence = db.Column(db.Float, nullable=False)  # 0.0 - 1.0
+    tempo = db.Column(db.Float, nullable=False)
 
     def __init__(self, data):
         self.track_id = data["id"]
@@ -94,7 +88,6 @@ class Track(db.Model):
         self.liveness = data["liveness"]
         self.valence = data["valence"]
         self.tempo = data["tempo"]
-
 
     def to_dict(self):
         return {
@@ -118,18 +111,21 @@ class Track(db.Model):
         }
 
 
-
 class Session(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, nullable=False)
-    timestamp = db.Column(db.DateTime, nullable=False) # no nanoseconds
+    timestamp = db.Column(db.DateTime, nullable=False)  # no nanoseconds
     user_id = db.Column(db.Integer, nullable=False)
     track_id = db.Column(db.String(22), nullable=True)
-    event_type = db.Column(db.String(20), nullable=False) #skip, play, like, advertisment
+    event_type = db.Column(
+        db.String(20), nullable=False
+    )  # skip, play, like, advertisment
 
     def __init__(self, data):
         self.session_id = data["session_id"]
-        self.timestamp = datetime.strptime(data["timestamp"][:19], "%Y-%m-%dT%H:%M:%S") #nanoseconds not included
+        self.timestamp = datetime.strptime(
+            data["timestamp"][:19], "%Y-%m-%dT%H:%M:%S"
+        )  # nanoseconds not included
         self.user_id = data["user_id"]
         self.track_id = data["track_id"]
         self.event_type = data["event_type"]
@@ -145,13 +141,13 @@ class Session(db.Model):
         }
 
 
-
 class Recommendation(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     playlist_id = db.Column(db.String(22), nullable=False)
     track_id = db.Column(db.String(22), nullable=False)
-    reaction = db.Column(db.Boolean, nullable=True) #skiped, not skipped, not yet decided
-
+    reaction = db.Column(
+        db.Boolean, nullable=True
+    )  # skiped, not skipped, not yet decided
 
     def __init__(self, playlist_id, track_id, reaction=None):
         self.playlist_id = playlist_id
@@ -163,5 +159,5 @@ class Recommendation(db.Model):
             "recommendation_id": self.id,
             "playlist_id": self.playlist_id,
             "track_id": self.track_id,
-            "reaction": self.reaction
+            "reaction": self.reaction,
         }

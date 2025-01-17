@@ -6,22 +6,23 @@ from active_gen import UpdateGroupReccomendations
 # /recommend_tracks = GroupReccomendations(users_ids).get()
 # /update_recommendations = UpdateGroupReccomendations(playlist_id).get()
 # /test = GroupReccomendations(data).test_create_recommendations()
- 
 
 
- 
 app = Flask(__name__)
+
 
 @app.route("/check", methods=["POST"])
 def check():
     data = request.get_json()
-    return ("heellerr")
+    return "hello"
+
 
 @app.route("/recommend", methods=["POST"])
 def recommend():
     users_ids = request.get_json()
     track_ids = GroupReccomendations(users_ids).get()
     return track_ids
+
 
 @app.route("/update_recommendation", methods=["POST"])
 def update_recommendation():
