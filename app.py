@@ -1,16 +1,21 @@
-from flask import Flask
+from flask import Flask, jsonify, request
 import os
 import json
 from models import db, User, Artist, Session, Track, Recommendation
-from data_routes import data_blueprint
-from model.model_routes import model_blueprint
+from app_routes import app_blueprint
+from recommendations_routes import recommendations_blueprint
+
+from models import Artist, Track, Session, User, Recommendation, db  # poprawny import z app
+from datetime import datetime
+import uuid
+import requests
+recommendation_url = "http://recommendation:8001/"
 
 def clear_database():
     db.session.query(User).delete()
     db.session.query(Artist).delete()
     db.session.query(Session).delete()
     db.session.query(Track).delete()
-
     db.session.commit()
 
 def load_data_from_jsonl(file_path, dataType):
@@ -27,30 +32,49 @@ def load_data_from_jsonl(file_path, dataType):
     else:
         raise Exception(f"{file_path} : file not found")
 
+
+
+def call_random_microservice():
+    response = requests.get(f"{recommendation_url}/generate")
+    return response.json().get("random_number")
+
 def create_app():
     app = Flask(__name__)
+
+    # Ładowanie konfiguracji aplikacji
     app.config.from_object("config.Config")
 
+    # Inicjalizacja bazy danych
     db.init_app(app)
 
     with app.app_context():
-        app.register_blueprint(data_blueprint)
-        app.register_blueprint(model_blueprint)
+        app.register_blueprint(app_blueprint)
+        app.register_blueprint(recommendations_blueprint)
 
         db.create_all()
-        # db.session.query(Recommendation).delete()
 
+        # Załaduj dane do bazy, jeśli są puste
         if Artist.query.count() == 0:
             load_data_from_jsonl("data/artists.jsonl", Artist)
         if Session.query.count() == 0:
             load_data_from_jsonl("data/sessions.jsonl", Session)
         if Track.query.count() == 0:
             load_data_from_jsonl("data/tracks.jsonl", Track)
-        if User.query.count() == 0:            
+        if User.query.count() == 0:
             load_data_from_jsonl("data/users.jsonl", User)
 
+
+# /recommend_tracks = GroupReccomendations(users_ids).get()
+# /update_recommendations = UpdateGroupReccomendations(playlist_id).get()
+# /test = GroupReccomendations(data).test_create_recommendations()
+ 
     return app
+
 
 if __name__ == "__main__":
     app = create_app()
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host='0.0.0.0', port=8000)
+
+
+
+

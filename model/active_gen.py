@@ -1,43 +1,41 @@
-import numpy as np
-from models import Recommendation, Artist, User, Track, Session, db
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
+
+import numpy as np
+import itertools
+import requests
+from collections import Counter
+
+import random
+
+app_url = "http://app:8000"
+
+def get_tracks_by_ids(track_ids):
+    tracks = (requests.post(f"{app_url}/track_by_id", json=track_ids)).json()
+    return tracks
+
+def get_tracks_without_mentioned_by_ids(track_ids):
+    tracks = (requests.post(f"{app_url}/tracks_without_mentioned_by", json=track_ids)).json()
+    return tracks
 
 
 # TODO - sometimes PATCH gives nothing? empty recommendation?
 
-def get_tracks_without_mentioned_by_ids(track_ids):
-    tracks = Track.query.filter(~Track.track_id.in_(track_ids)).all()
+def get_tracks_and_reactions_for_playlist(playlist_id):
+    tracks = (requests.post(f"{app_url}/tracks_of_playlist", json=playlist_id)).json()
+    return tracks
 
-    unique_artist_ids = {track.artist_id for track in tracks}
+
+
+def enumerate_artist_id(tracks):
+    unique_artist_ids = {track['artist_id'] for track in tracks}
+
     artist_id_to_int = {artist_id: idx for idx, artist_id in enumerate(unique_artist_ids)}
 
     return [{
-        **track.to_dict(),
-        "artist_id": artist_id_to_int[track.artist_id],
+        **track,
+        "artist_id": artist_id_to_int[track['artist_id']],
     } for track in tracks]
-
-def get_tracks_and_reactions_for_playlist(playlist_id):
-    recommendations = (
-        db.session.query(Recommendation, Track, Artist)
-        .join(Track, Track.track_id == Recommendation.track_id)
-        .join(Artist, Artist.id == Track.artist_id)
-        .filter(Recommendation.playlist_id == playlist_id)
-        .order_by(Recommendation.id.desc())
-        .all()
-    )
-
-    unique_artist_ids = {track.artist_id for _, track, _ in recommendations}
-    artist_id_to_int = {artist_id: idx for idx, artist_id in enumerate(unique_artist_ids)}
-
-    return [
-        {
-            **track.to_dict(),
-            "artist_id": artist_id_to_int[track.artist_id],  
-            "reaction": int(recommendation.reaction)  
-        }
-        for recommendation, track, _ in recommendations
-    ]
 
 
 
@@ -88,12 +86,14 @@ class UpdateGroupReccomendations:
         '''
         main method creating tracks for class, connecting all methods 
         '''
-        data = get_tracks_and_reactions_for_playlist(self.playlist_id)
+        data = get_tracks_and_reactions_for_playlist(self.playlist_id) #TODO - 
+        data = enumerate_artist_id(data)
 
         track_ids = {track['track_id'] for track in data}
         track_ids = list(track_ids)
 
         propositions = get_tracks_without_mentioned_by_ids(track_ids)
+        propositions = enumerate_artist_id(propositions)
 
         predictions = self.predict(data, propositions)
 

@@ -1,11 +1,23 @@
-version: '3.8'
+
 services:
   app:
     build: .
     ports:
-      - "5000:5000"
+      - "8000:8000"
     volumes:
       - .:/app
     environment:
       - FLASK_APP=app.py
+      - FLASK_ENV=development
+
+  recommendation:
+    build:
+      context: .
+      dockerfile: model/Dockerfile  # Ustawienie osobnego Dockerfile dla mikroserwisu rekomendacji
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./model:/app
+    environment:
+      - FLASK_APP=recommendation_service.py
       - FLASK_ENV=development

@@ -1,4 +1,3 @@
-from models import Recommendation, User, Track, Session, Artist, db
 from datetime import datetime, timedelta
 
 from sklearn.cluster import KMeans
@@ -11,45 +10,31 @@ from sklearn.metrics import accuracy_score
 
 import numpy as np
 import itertools
-
+import requests
 from collections import Counter
 
 import random
 
+app_url = "http://app:8000"
+
 #TODO - add session related weights calibration
 #TODO - check what track attr to use
 
+# from recommendation_service import get_tracks_by_ids, get_tracks_without_mentioned_by_ids, get_type_of_tracks
+
 def get_tracks_by_ids(track_ids):
-    tracks = []
-    for track_id in track_ids:
-        tracks.append((Track.query.filter(Track.track_id == track_id).first()).to_dict())
+    tracks = (requests.post(f"{app_url}/track_by_id", json=track_ids)).json()
     return tracks
 
 def get_tracks_without_mentioned_by_ids(track_ids):
-    tracks = Track.query.filter(~Track.track_id.in_(track_ids)).all()
-    return [track.to_dict() for track in tracks]
+    tracks = (requests.post(f"{app_url}/tracks_without_mentioned_by", json=track_ids)).json()
+    return tracks
+
 
 def get_type_of_tracks(user_id, event_type, from_time, to_time=datetime.utcnow()):
-   sessions = (
-      Session.query
-      .filter(
-         (Session.user_id == user_id) & 
-         (Session.event_type == event_type) &
-         (Session.timestamp > from_time) &
-         (Session.timestamp <= to_time)
-      )
-      .all()
-   )
-
-   user_records = {}
-
-   for session in sessions:
-      if (session.track_id not in user_records.keys()):
-         user_records[session.track_id] = 0
-      user_records[session.track_id] += 1
-   
-   return user_records
-
+    data = [user_id, event_type, from_time.isoformat(), to_time.isoformat()]
+    user_records = (requests.post(f"{app_url}/users_actions_of_type", json=data)).json()
+    return user_records
 
 
 
