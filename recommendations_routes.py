@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 import requests
-from models import db, User, Artist, Session, Track, Recommendation
+from models import db, Recommendation
 import uuid
 
 recommendation_url = "http://recommendation:8001/"

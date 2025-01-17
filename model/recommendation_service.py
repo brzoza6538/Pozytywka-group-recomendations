@@ -1,9 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request
 from init_gen import GroupReccomendations
 from active_gen import UpdateGroupReccomendations
-import uuid
-import requests
-import random
 
 
 # /recommend_tracks = GroupReccomendations(users_ids).get()

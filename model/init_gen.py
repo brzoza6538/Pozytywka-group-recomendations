@@ -11,9 +11,7 @@ from sklearn.metrics import accuracy_score
 import numpy as np
 import itertools
 import requests
-from collections import Counter
 
-import random
 
 app_url = "http://app:8000"
 

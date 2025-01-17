@@ -1,9 +1,6 @@
 from flask import Blueprint, jsonify, request, render_template
-
 from models import Artist, User, Track, Session, db
-import requests
 from models import db, User, Artist, Session, Track, Recommendation
-import uuid
 from datetime import datetime
 
 app_blueprint = Blueprint("data", __name__)

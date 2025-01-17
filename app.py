@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask
 import os
 import json
 from models import db, User, Artist, Session, Track, Recommendation
@@ -6,8 +6,6 @@ from app_routes import app_blueprint
 from recommendations_routes import recommendations_blueprint
 
 from models import Artist, Track, Session, User, Recommendation, db  # poprawny import z app
-from datetime import datetime
-import uuid
 import requests
 recommendation_url = "http://recommendation:8001/"
 
