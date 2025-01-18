@@ -11,7 +11,7 @@ from sklearn.metrics import accuracy_score
 import numpy as np
 import itertools
 import requests
-
+import random
 
 app_url = "http://app:8000"
 
@@ -57,8 +57,12 @@ class GroupReccomendations:
 
         self.recommendations = []
 
-    def get(self):
-        self.recommendations = self.create_recommendations()
+    def get_advanced(self):
+        self.recommendations = self.create_recommendations_advanced()
+        return self.recommendations
+
+    def get_basic(self):
+        self.recommendations = self.create_recommendations_basic()
         return self.recommendations
 
     def prepare_features(self, tracks_data):
@@ -227,6 +231,7 @@ class GroupReccomendations:
             print(f"{i} -- {accuracy}")
         return str(accuracy)
 
+
     def recommend_tracks_for_cluster(self, tracks_data):
         '''
         recommend tracks for each individual cluster based on how "close" they are to the average of a group
@@ -341,7 +346,30 @@ class GroupReccomendations:
             print(f"\nmin :  {round(np.min(diff), 3)} max : {round(np.max(diff), 3)} ddelt : {round(np.mean(diff), 3)} \nsetup : {setup}\n")
         return results
 
-    def create_recommendations(self):
+
+    def create_recommendations_basic(self):
+        '''
+        main method creating  tracks for class using basic version
+        '''
+
+        tracks_ids = self.get_top_tracks()
+        tracks_data = get_tracks_by_ids(tracks_ids)
+
+        track_clusters = self.cluster_tracks(
+            tracks_data
+        )  # group most liked music of users using Kmeans
+
+        recommendations = []
+
+        for cluster in track_clusters:
+            recommendations += self.recommend_tracks_for_cluster(cluster)  # recommend tracks for each individual cluster
+
+        recommendations = random.sample(recommendations, self._final_playlist_length)
+        #instead of choosing the ones with best predicted weight, just choose random tracks from clusters
+        return recommendations
+
+
+    def create_recommendations_advanced(self):
         '''
         main method creating tracks for class, connecting all methods
         '''
@@ -372,7 +400,7 @@ class GroupReccomendations:
 
         return recommendations
 
-    def test_create_recommendations(self):
+    def test_create_recommendations_advanced(self):
         time_start_p = [180, 360, 720]
         time_end_p = [90]
         users_favourite_tracks_amount_p = [70]
@@ -419,7 +447,7 @@ class GroupReccomendations:
             self.normalisation_range_down = setup[9]
 
             start = datetime.utcnow()
-            recommendations = self.create_recommendations()
+            recommendations = self.create_recommendations_advanced()
             end = datetime.utcnow()
 
             self._time_window_start = datetime.utcnow() - timedelta(days=setup[1])
