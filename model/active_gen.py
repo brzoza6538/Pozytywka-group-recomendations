@@ -2,10 +2,15 @@ from sklearn.svm import LinearSVC
 
 import numpy as np
 import requests
-
+from datetime import datetime, timedelta
 
 app_url = "http://app:8000"
 
+
+def get_type_of_tracks(user_id, event_type, from_time, to_time=datetime.utcnow()):
+    data = [user_id, event_type, from_time.isoformat(), to_time.isoformat()]
+    user_records = (requests.post(f"{app_url}/users_actions_of_type", json=data)).json()
+    return user_records
 
 def get_tracks_by_ids(track_ids):
     tracks = (requests.post(f"{app_url}/track_by_id", json=track_ids)).json()
@@ -18,17 +23,15 @@ def get_tracks_without_mentioned_by_ids(track_ids):
     ).json()
     return tracks
 
-
-# TODO - sometimes PATCH gives nothing? empty recommendation?
-
-
 def get_tracks_and_reactions_for_playlist(playlist_id):
     tracks = (requests.post(f"{app_url}/tracks_of_playlist", json=playlist_id)).json()
     return tracks
 
 
 def enumerate_artist_id(tracks1, tracks2):
-    # Combine unique artist IDs from both dictionaries
+    """ 
+    Combine unique artist IDs from both dictionaries
+    """
     unique_artist_ids = {track['artist_id'] for track in tracks1 + tracks2}
 
     artist_id_to_int = {
@@ -59,9 +62,10 @@ class UpdateGroupReccomendations:
     def __init__(self, playlist_id):
         self.playlist_id = playlist_id
         self._batch_size = 10
-        self.recommended_tracks = self.recommend_more()
+        self.recommended_tracks = []
 
     def get(self):
+        self.recommended_tracks = self.recommend_more()
         return self.recommended_tracks
 
     def prepare_features(self, data):
@@ -91,21 +95,21 @@ class UpdateGroupReccomendations:
 
         return np.array(X)
 
-    def predict(self, data, test_data):
+    def predict(self, data, train_data):
         '''
         method predicting if test_data would be classified as skip or add
         to the recommendations playlist using LinearSVC
         '''
         X = self.prepare_features(data)
 
-        test_data = self.prepare_features(test_data)
+        train_data = self.prepare_features(train_data)
 
         y = np.array([entry["reaction"] for entry in data])
 
         model = LinearSVC(max_iter=100)
         model.fit(X, y)
 
-        predictions = model.predict(test_data)
+        predictions = model.predict(train_data)
 
         return predictions
 
@@ -113,7 +117,7 @@ class UpdateGroupReccomendations:
         '''
         main method creating tracks for class, connecting all methods
         '''
-        data = get_tracks_and_reactions_for_playlist(self.playlist_id)  # TODO -
+        data = get_tracks_and_reactions_for_playlist(self.playlist_id)
 
         track_ids = {track['track_id'] for track in data}
         track_ids = list(track_ids)
@@ -131,3 +135,54 @@ class UpdateGroupReccomendations:
         ]
 
         return recommended_tracks[: self._batch_size]
+    
+    def get_user_data(self, user_id, time_window_start, time_window_end):
+        liked_data = get_type_of_tracks(user_id, "like", time_window_start, time_window_end)
+        skipped_data = get_type_of_tracks(user_id, "skip", time_window_start, time_window_end)
+        records = {}
+
+        for track_id in set(liked_data.keys()).union(skipped_data.keys()):
+            records[track_id] = (liked_data.get(track_id, 0) - skipped_data.get(track_id, 0))
+
+        data = get_tracks_by_ids(list(records.keys()))
+
+        for record in data:
+            record["reaction"] = (False if records[record["track_id"]] < 0 else True)
+
+        return data
+
+    def test_recommendation(self, user_ids):
+        """
+            test algorithm training it on users's history of last year, test based on last 3 months 
+        """
+        time_window_start = datetime.utcnow() - timedelta(days=360)
+        time_window_end = datetime.utcnow()- timedelta(days=90)
+
+        results = []
+        accuracy_counter = 0 
+        d_counter = 0 
+
+        for user_id in user_ids:
+            data = self.get_user_data(user_id, time_window_start, time_window_end) [:30]
+
+            track_ids = {track['track_id'] for track in data}
+            track_ids = list(track_ids)
+            
+            propositions =  self.get_user_data(user_id, time_window_end, datetime.utcnow())
+            propositions = [{key: value for key, value in track.items() if key != "reaction"} for track in propositions]
+
+            propositions, data = enumerate_artist_id(propositions, data)
+            predictions = self.predict(data, propositions)
+
+            test_data = self.get_user_data(user_id, time_window_end, datetime.utcnow())
+            accuracy_counter = 0 
+            d_counter = 0 
+
+            for i in range(len(predictions)):
+                if (predictions[i] == 1 and test_data[i]['reaction'] == True):
+                    accuracy_counter += 1
+                else:
+                    d_counter += 1
+            print(round(accuracy_counter/len(test_data), 4))
+            results.append(f"{user_id}   {round(accuracy_counter/len(test_data), 4)}")
+        return results

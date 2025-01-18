@@ -8,26 +8,35 @@ app = Flask(__name__)
 
 @app.route("/test_recommendations", methods=["POST"])
 def check_recommendations():
-    users_ids = request.get_json()
-    response = GroupReccomendations(users_ids).test_create_recommendations()
+    user_ids = request.get_json()
+    response = GroupReccomendations(user_ids).test_create_recommendations()
     return response
 
 @app.route("/test_clusters", methods=["POST"])
 def test_clustering():
-    users_ids = request.get_json()
-    response = GroupReccomendations(users_ids).test_clusters()
+    user_ids = request.get_json()
+    response = GroupReccomendations(user_ids).test_clusters()
     return response
 
 @app.route("/test_tree", methods=["POST"])
 def test_tree_accuracy():
-    users_ids = request.get_json()
-    response = GroupReccomendations(users_ids).test_tree_accuracy()
+    user_ids = request.get_json()
+    response = GroupReccomendations(user_ids).test_tree_accuracy()
     return response
+
+
+@app.route("/test_update", methods=["POST"])
+def test_update_accuracy():
+    user_ids = request.get_json()
+    response = UpdateGroupReccomendations("mock_playlist_id").test_recommendation(user_ids)
+    return response
+
+
 
 @app.route("/recommend", methods=["POST"])
 def recommend():
-    users_ids = request.get_json()
-    track_ids = GroupReccomendations(users_ids).get()
+    user_ids = request.get_json()
+    track_ids = GroupReccomendations(user_ids).get()
     return track_ids
 
 
