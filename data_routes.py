@@ -27,7 +27,13 @@ def get_tracks_by_ids():
 @app_blueprint.route("/tracks_without_mentioned_by", methods=["POST"])
 def get_tracks_without_mentioned_by_ids():
     track_ids = request.get_json()
-    tracks = Track.query.filter(~Track.track_id.in_(track_ids)).all()
+    names_to_avoid = (Track.query.filter(~Track.track_id.in_(track_ids)).all())
+    names_to_avoid = [track.name for track in names_to_avoid] 
+
+    tracks = Track.query.filter(
+        ~Track.track_id.in_(track_ids),  # Ignoruj track_id z listy track_ids
+        ~Track.name.in_(names_to_avoid)   # Ignoruj tracki z nazwami w names_to_avoid
+    ).all()
 
     return [track.to_dict() for track in tracks]
 
