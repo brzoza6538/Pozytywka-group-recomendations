@@ -36,24 +36,36 @@ def get_type_of_tracks(user_id, event_type, from_time, to_time=datetime.utcnow()
 
 class GroupReccomendations:
     def __init__(self, user_ids):
+
+        self.user_ids = user_ids
+
         self._time_window_start = datetime.utcnow() - timedelta(days=180)
         self._time_window_end = datetime.utcnow()
 
-        self._users_favourite_tracks_amount = 70  * len(user_ids)
+        self._users_favourite_tracks_amount = 70  * len(self.user_ids)
         self._cluster_recommendation = 30
-        self._taste_groups = 5  * len(user_ids) # powinno być zależne od ilości osób czy nie?
+        self._taste_groups = 5  * len(self.user_ids) # powinno być zależne od ilości osób czy nie?
 
         self._liked_weight = 5
         self._skipped_weight = -5
         self._started_weight = 5
 
         self.normalisation_range_up = 1
-        self.normalisation_range_down = -1
+        self.normalisation_range_down = 0
 
         self._final_playlist_length = 30
 
-        self.user_ids = user_ids
-
+        self._used_features = [
+            "danceability",
+             "energy",
+             "loudness",
+             "speechiness",
+             "acousticness",
+             "instrumentalness",
+             "liveness",
+             "valence",
+             "tempo"
+            ]
 
         self.recommendations = []
 
@@ -65,46 +77,20 @@ class GroupReccomendations:
         self.recommendations = self.create_recommendations_basic()
         return self.recommendations
 
-    def prepare_features(self, tracks_data):
+    def prepare_features(self, tracks_data, discrete=False):
         '''
-        get features of tracks with artist_id
+        Get features of tracks, optionally including artist_id.
         '''
         features = []
         for track in tracks_data:
             feature_vector = [
-                track["danceability"],
-                track["energy"],
-                track["loudness"],
-                track["speechiness"],
-                track["acousticness"],
-                track["instrumentalness"],
-                track["liveness"],
-                track["valence"],
-                track["tempo"],
-                track["artist_id"],
+                track[feature] for feature in self._used_features
             ]
+            if discrete:
+                feature_vector.append(track["artist_id"])
             features.append(feature_vector)
         return np.array(features)
 
-    def prepare_features_without_discrete(self, tracks_data):
-        '''
-        get features of tracks without artist_id or other discrete columns
-        '''
-        features = []
-        for track in tracks_data:
-            feature_vector = [
-                track["danceability"],
-                track["energy"],
-                track["loudness"],
-                track["speechiness"],
-                track["acousticness"],
-                track["instrumentalness"],
-                track["liveness"],
-                track["valence"],
-                track["tempo"],
-            ]
-            features.append(feature_vector)
-        return np.array(features)
 
     def encode_artist_ids(self, tracks_data):
         '''
@@ -177,7 +163,7 @@ class GroupReccomendations:
 
         tracks_data = self.encode_artist_ids(tracks_data)
 
-        features = self.prepare_features(tracks_data)
+        features = self.prepare_features(tracks_data, discrete=True)
 
         kmeans = KMeans(n_clusters=taste_groups)
         clusters = kmeans.fit_predict(features)
@@ -203,17 +189,7 @@ class GroupReccomendations:
 
             for cluster_idx, cluster in enumerate(track_clusters):
                 for track in cluster:
-                    features = [
-                        track["danceability"],
-                        track["energy"],
-                        track["loudness"],
-                        track["speechiness"],
-                        track["acousticness"],
-                        track["instrumentalness"],
-                        track["liveness"],
-                        track["valence"],
-                        track["tempo"],
-                    ]
+                    features = self.prepare_features([track], discrete=False)[0]
                     X.append(features)
                     y.append(cluster_idx)
 
@@ -242,8 +218,8 @@ class GroupReccomendations:
         # propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
         propositions_pool = get_tracks_by_ids(self.get_top_tracks())
 
-        liked_tracks_features = self.prepare_features_without_discrete(tracks_data)
-        propositions_features = self.prepare_features_without_discrete(propositions_pool)
+        liked_tracks_features = self.prepare_features(tracks_data)
+        propositions_features = self.prepare_features(propositions_pool)
 
         average_features = np.mean(liked_tracks_features, axis=0)
 
@@ -268,31 +244,20 @@ class GroupReccomendations:
         train_tracks = [
             get_tracks_by_ids([track_id])[0] for track_id in train_data.keys()
         ]
-        features_list = self.prepare_features_without_discrete(train_tracks)
+        features_list = self.prepare_features(train_tracks)
         labels = list(train_data.values())
 
         tree = DecisionTreeRegressor(max_depth=g_max_depth)
         tree.fit(features_list, labels)
 
         test_tracks = get_tracks_by_ids(test_data)
+        test_features = self.prepare_features(test_tracks)
         predictions = {}
-
-        for track in test_tracks:
-            track_features = [
-                track["danceability"],
-                track["energy"],
-                track["loudness"],
-                track["speechiness"],
-                track["acousticness"],
-                track["instrumentalness"],
-                track["liveness"],
-                track["valence"],
-                track["tempo"],
-            ]
-            score = tree.predict([track_features])[0]
+        for track, features in zip(test_tracks, test_features):
+            score = tree.predict([features])[0]
             predictions[track["track_id"]] = max(0, min(1, score))
-
         return predictions
+
 
     def test_tree_accuracy(self):
         '''
@@ -402,14 +367,14 @@ class GroupReccomendations:
 
         return recommendations
 
-    def test_create_recommendations_advanced(self):
+    def test_create_recommendations(self):
         """
         setup = (used_algorithm, time_start, time_end, users_favourite_tracks_amount, cluster_recommendation, taste_groups, liked_weight, skipped_weight, started_weight, normalisation_range_up, normalisation_range_down) 
 
         """
         model_p = [self.create_recommendations_advanced, self.create_recommendations_basic]
-        time_start_p = [270]
-        time_end_p = [90]
+        time_start_p = [360]
+        time_end_p = [180]
         users_favourite_tracks_amount_p = [70]
         cluster_recommendation_p = [30]
         taste_groups_p = [5]
@@ -418,8 +383,8 @@ class GroupReccomendations:
         skipped_weight_p = [-5, -1]
         started_weight_p = [5, 4, 1]
 
-        self.normalisation_range_up = [1]
-        self.normalisation_range_down = [0]
+        normalisation_range_up_p = [1]
+        normalisation_range_down_p = [0]
 
         self._final_playlist_length = 100
 
@@ -435,8 +400,8 @@ class GroupReccomendations:
                 liked_weight_p,
                 skipped_weight_p,
                 started_weight_p,
-                self.normalisation_range_up,
-                self.normalisation_range_down
+                normalisation_range_up_p,
+                normalisation_range_down_p
             )
         )
         results = []
@@ -460,7 +425,7 @@ class GroupReccomendations:
             recommendations = setup[0]()
             end = datetime.utcnow()
 
-            self._time_window_start = datetime.utcnow() - timedelta(days=setup[1])
+            self._time_window_start = datetime.utcnow() - timedelta(days=setup[2])
             self._time_window_end = datetime.utcnow()
             test_tracks = self.get_top_tracks()
 
@@ -475,11 +440,63 @@ class GroupReccomendations:
                 - Generated: {len(recommendations)}
                 - Test sample size: {len(test_tracks)}
                 - Found duplicates: {duplicates}
-                - Score (duplicates/test tracks): {round(duplicates / len(test_tracks), 4)}
+                - Score (duplicates/test tracks): {round(duplicates / len(recommendations), 4)}
                 - Time taken: {(end - start).total_seconds()}
                 """
             )
             results.append(message)
             print(message)
+
+        return results
+
+    def test_features(self):
+        """
+            test feature combinations
+        """
+        model_p = [self.create_recommendations_advanced, self.create_recommendations_basic]
+        self._final_playlist_length = 100
+        
+        time_constraint_up = 360
+        time_constraint_down = 180
+
+        features_chosen = []
+        filtered_features = [f for f in self._used_features if (f not in features_chosen)]
+
+        results = []
+
+        self._final_playlist_length = 100
+
+        for feature_tested in ([filtered_features] + list(itertools.permutations(filtered_features, len(filtered_features)-1))):
+            self._used_features = feature_tested
+
+            for model in model_p:
+                self._time_window_start = datetime.utcnow() - timedelta(days=time_constraint_up)
+                self._time_window_end = datetime.utcnow() - timedelta(days=time_constraint_down)
+
+                start = datetime.utcnow()
+                recommendations = model()
+                end = datetime.utcnow()
+
+                self._time_window_start = datetime.utcnow() - timedelta(days=time_constraint_down)
+                self._time_window_end = datetime.utcnow()
+                test_tracks = self.get_top_tracks()
+
+                duplicates = 0
+                for track in recommendations:
+                    if track in test_tracks:
+                        duplicates += 1
+                message = (
+                    f"""
+                    \n{model.__name__}
+                    {self._used_features}
+                    - Generated: {len(recommendations)}
+                    - Test sample size: {len(test_tracks)}
+                    - Found duplicates: {duplicates}
+                    - Score (duplicates/test tracks): {round(duplicates / len(recommendations), 4)}
+                    - Time taken: {(end - start).total_seconds()}
+                    """
+                )
+                results.append(message)
+                print(message)
 
         return results

@@ -9,7 +9,7 @@ app = Flask(__name__)
 @app.route("/test_recommendations", methods=["POST"])
 def check_recommendations():
     user_ids = request.get_json()
-    response = GroupReccomendations(user_ids).test_create_recommendations_advanced()
+    response = GroupReccomendations(user_ids).test_create_recommendations()
     return response
 
 @app.route("/test_clusters", methods=["POST"])
@@ -29,6 +29,12 @@ def test_tree_accuracy():
 def test_update_accuracy():
     user_ids = request.get_json()
     response = UpdateGroupReccomendations("mock_playlist_id").test_recommendation(user_ids)
+    return response
+
+@app.route("/test_features", methods=["POST"])
+def test_features_used():
+    user_ids = request.get_json()
+    response = GroupReccomendations(user_ids).test_features()
     return response
 
 
