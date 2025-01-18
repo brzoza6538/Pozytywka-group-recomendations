@@ -238,6 +238,7 @@ class GroupReccomendations:
         '''
         liked_tracks_ids = [track["track_id"] for track in tracks_data]
 
+        #not enough data to use the whole database
         # propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
         propositions_pool = get_tracks_by_ids(self.get_top_tracks())
 
@@ -298,6 +299,8 @@ class GroupReccomendations:
         TODO - move somewhere else
 
         used to test accuracy of decision tree based scores
+
+        setup = (liked_weight_p, skipped_weight_p, started_weight_p, depths, normalisation_range_up_p, normalisation_range_down_p ) 
         '''
         liked_weight_p = [1, 5]
         skipped_weight_p = [-5, -10]
@@ -342,8 +345,7 @@ class GroupReccomendations:
 
                 for track in tracks_data:
                     diff.append(abs(prediction[track] - test_data.get(track, 0)))
-            results.append(f"\nmin :  {round(np.min(diff), 3)} max : {round(np.max(diff), 3)} ddelt : {round(np.mean(diff), 3)} \nsetup : {setup}\n")
-            print(f"\nmin :  {round(np.min(diff), 3)} max : {round(np.max(diff), 3)} ddelt : {round(np.mean(diff), 3)} \nsetup : {setup}\n")
+            results.append(f"min :  {round(np.min(diff), 3)} max : {round(np.max(diff), 3)} ddelt : {round(np.mean(diff), 3)} \nsetup : {setup}")
         return results
 
 
@@ -401,21 +403,29 @@ class GroupReccomendations:
         return recommendations
 
     def test_create_recommendations_advanced(self):
-        time_start_p = [180, 360, 720]
+        """
+        setup = (used_algorithm, time_start, time_end, users_favourite_tracks_amount, cluster_recommendation, taste_groups, liked_weight, skipped_weight, started_weight, normalisation_range_up, normalisation_range_down) 
+
+        """
+        model_p = [self.create_recommendations_advanced, self.create_recommendations_basic]
+        time_start_p = [270]
         time_end_p = [90]
         users_favourite_tracks_amount_p = [70]
         cluster_recommendation_p = [30]
-        taste_groups_p = [10]
+        taste_groups_p = [5]
 
-        liked_weight_p = [5]
-        skipped_weight_p = [-5]
-        started_weight_p = [5]
+        liked_weight_p = [5, 1]
+        skipped_weight_p = [-5, -1]
+        started_weight_p = [5, 4, 1]
 
         self.normalisation_range_up = [1]
         self.normalisation_range_down = [0]
 
+        self._final_playlist_length = 100
+
         constraints = list(
             itertools.product(
+                model_p,
                 time_start_p,
                 time_end_p,
                 users_favourite_tracks_amount_p,
@@ -432,22 +442,22 @@ class GroupReccomendations:
         results = []
 
         for setup in constraints:
-            self._time_window_start = datetime.utcnow() - timedelta(days=setup[0])
-            self._time_window_end = datetime.utcnow() - timedelta(days=setup[1])
+            self._time_window_start = datetime.utcnow() - timedelta(days=setup[1])
+            self._time_window_end = datetime.utcnow() - timedelta(days=setup[2])
 
-            self._users_favourite_tracks_amount = setup[2] * len(self.user_ids)
-            self._cluster_recommendation = setup[3]
-            self._taste_groups = setup[4] * len(self.user_ids)
+            self._users_favourite_tracks_amount = setup[3] * len(self.user_ids)
+            self._cluster_recommendation = setup[4]
+            self._taste_groups = setup[5] * len(self.user_ids)
 
-            self._liked_weight = setup[5]
-            self._skipped_weight = setup[6]
-            self._started_weight = setup[7]
+            self._liked_weight = setup[6]
+            self._skipped_weight = setup[7]
+            self._started_weight = setup[8]
 
-            self.normalisation_range_up = setup[8]
-            self.normalisation_range_down = setup[9]
+            self.normalisation_range_up = setup[9]
+            self.normalisation_range_down = setup[10]
 
             start = datetime.utcnow()
-            recommendations = self.create_recommendations_advanced()
+            recommendations = setup[0]()
             end = datetime.utcnow()
 
             self._time_window_start = datetime.utcnow() - timedelta(days=setup[1])
@@ -458,11 +468,18 @@ class GroupReccomendations:
             for track in recommendations:
                 if track in test_tracks:
                     duplicates += 1
-            results.append(
-                f"\n{setup}\n   -  {len(test_tracks)}   - {duplicates} : {end - start}\n"
+            message = (
+                f"""
+                \n{setup[0].__name__}
+                {setup[1:]}
+                - Generated: {len(recommendations)}
+                - Test sample size: {len(test_tracks)}
+                - Found duplicates: {duplicates}
+                - Score (duplicates/test tracks): {round(duplicates / len(test_tracks), 4)}
+                - Time taken: {(end - start).total_seconds()}
+                """
             )
-            print(
-                f"\n{setup}\n   -  {len(test_tracks)}   - {duplicates} : {(end - start).total_seconds()}\n"
-            )
+            results.append(message)
+            print(message)
 
         return results
