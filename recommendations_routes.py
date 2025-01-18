@@ -53,11 +53,3 @@ def update_recommendations():
 
     return str(playlist_id), 201
 
-
-@recommendations_blueprint.route("/check", methods=["POST"])
-def mock_test():
-    data = request.get_json()
-
-    track_ids = (requests.post(f"{recommendation_url}/test", json=data)).json()
-
-    return jsonify(track_ids)

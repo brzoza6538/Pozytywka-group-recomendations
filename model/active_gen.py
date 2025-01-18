@@ -27,20 +27,32 @@ def get_tracks_and_reactions_for_playlist(playlist_id):
     return tracks
 
 
-def enumerate_artist_id(tracks):
-    unique_artist_ids = {track['artist_id'] for track in tracks}
+def enumerate_artist_id(tracks1, tracks2):
+    # Combine unique artist IDs from both dictionaries
+    unique_artist_ids = {track['artist_id'] for track in tracks1 + tracks2}
 
     artist_id_to_int = {
         artist_id: idx for idx, artist_id in enumerate(unique_artist_ids)
     }
 
-    return [
+    updated_tracks1 = [
         {
             **track,
             "artist_id": artist_id_to_int[track['artist_id']],
         }
-        for track in tracks
+        for track in tracks1
     ]
+    
+    updated_tracks2 = [
+        {
+            **track,
+            "artist_id": artist_id_to_int[track['artist_id']],
+        }
+        for track in tracks2
+    ]
+
+    return updated_tracks1, updated_tracks2
+
 
 
 class UpdateGroupReccomendations:
@@ -102,13 +114,13 @@ class UpdateGroupReccomendations:
         main method creating tracks for class, connecting all methods
         '''
         data = get_tracks_and_reactions_for_playlist(self.playlist_id)  # TODO -
-        data = enumerate_artist_id(data)
 
         track_ids = {track['track_id'] for track in data}
         track_ids = list(track_ids)
 
         propositions = get_tracks_without_mentioned_by_ids(track_ids)
-        propositions = enumerate_artist_id(propositions)
+
+        propositions, data = enumerate_artist_id(propositions, data)
 
         predictions = self.predict(data, propositions)
 

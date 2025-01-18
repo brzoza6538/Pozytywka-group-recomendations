@@ -3,19 +3,26 @@ from init_gen import GroupReccomendations
 from active_gen import UpdateGroupReccomendations
 
 
-# /recommend_tracks = GroupReccomendations(users_ids).get()
-# /update_recommendations = UpdateGroupReccomendations(playlist_id).get()
-# /test = GroupReccomendations(data).test_create_recommendations()
-
-
 app = Flask(__name__)
 
 
-@app.route("/check", methods=["POST"])
-def check():
-    data = request.get_json()
-    return "hello"
+@app.route("/test_recommendations", methods=["POST"])
+def check_recommendations():
+    users_ids = request.get_json()
+    response = GroupReccomendations(users_ids).test_create_recommendations()
+    return response
 
+@app.route("/test_clusters", methods=["POST"])
+def test_clustering():
+    users_ids = request.get_json()
+    response = GroupReccomendations(users_ids).test_clusters()
+    return response
+
+@app.route("/test_tree", methods=["POST"])
+def test_tree_accuracy():
+    users_ids = request.get_json()
+    response = GroupReccomendations(users_ids).test_tree_accuracy()
+    return response
 
 @app.route("/recommend", methods=["POST"])
 def recommend():
