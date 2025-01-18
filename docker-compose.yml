@@ -13,7 +13,7 @@ services:
   recommendation:
     build:
       context: .
-      dockerfile: model/Dockerfile  # Ustawienie osobnego Dockerfile dla mikroserwisu rekomendacji
+      dockerfile: model/Dockerfile
     ports:
       - "8001:8001"
     volumes:

@@ -15,11 +15,6 @@ import requests
 
 app_url = "http://app:8000"
 
-# TODO - add session related weights calibration
-# TODO - check what track attr to use
-
-# from recommendation_service import get_tracks_by_ids, get_tracks_without_mentioned_by_ids, get_type_of_tracks
-
 
 def get_tracks_by_ids(track_ids):
     tracks = (requests.post(f"{app_url}/track_by_id", json=track_ids)).json()
@@ -44,9 +39,9 @@ class GroupReccomendations:
         self._time_window_start = datetime.utcnow() - timedelta(days=180)
         self._time_window_end = datetime.utcnow()
 
-        self._users_favourite_tracks_amount = 100  * len(user_ids) # 100
-        self._cluster_recommendation = 30 # 50
-        self._taste_groups = 5  * len(user_ids) # 3 #TODO zależne od ilości osób?
+        self._users_favourite_tracks_amount = 70  * len(user_ids)
+        self._cluster_recommendation = 30
+        self._taste_groups = 5  * len(user_ids) # powinno być zależne od ilości osób czy nie?
 
         self._liked_weight = 5
         self._skipped_weight = -5
@@ -55,7 +50,7 @@ class GroupReccomendations:
         self.normalisation_range_up = 1
         self.normalisation_range_down = -1
 
-        self._final_playlist_length = 50
+        self._final_playlist_length = 30
 
         self.user_ids = user_ids
 
@@ -238,7 +233,7 @@ class GroupReccomendations:
         '''
         liked_tracks_ids = [track["track_id"] for track in tracks_data]
 
-        #propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
+        # propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
         propositions_pool = get_tracks_by_ids(self.get_top_tracks())
 
         liked_tracks_features = self.prepare_features_without_discrete(tracks_data)
@@ -378,10 +373,10 @@ class GroupReccomendations:
         return recommendations
 
     def test_create_recommendations(self):
-        time_start_p = [720] #720
+        time_start_p = [180, 360, 720]
         time_end_p = [90]
         users_favourite_tracks_amount_p = [70]
-        cluster_recommendation_p = [50]
+        cluster_recommendation_p = [30]
         taste_groups_p = [10]
 
         liked_weight_p = [5]

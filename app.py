@@ -4,6 +4,7 @@ import json
 from models import db, User, Artist, Session, Track
 from app_routes import app_blueprint
 from recommendations_routes import recommendations_blueprint
+from sqlalchemy.exc import IntegrityError
 
 import requests
 
@@ -16,7 +17,6 @@ def clear_database():
     db.session.query(Session).delete()
     db.session.query(Track).delete()
     db.session.commit()
-
 
 def load_data_from_jsonl(file_path, dataType):
     if os.path.exists(file_path):
@@ -33,6 +33,7 @@ def load_data_from_jsonl(file_path, dataType):
         raise Exception(f"{file_path} : file not found")
 
 
+
 def call_random_microservice():
     response = requests.get(f"{recommendation_url}/generate")
     return response.json().get("random_number")
@@ -41,10 +42,8 @@ def call_random_microservice():
 def create_app():
     app = Flask(__name__)
 
-    # Ładowanie konfiguracji aplikacji
     app.config.from_object("config.Config")
 
-    # Inicjalizacja bazy danych
     db.init_app(app)
 
     with app.app_context():
@@ -63,9 +62,6 @@ def create_app():
         if User.query.count() == 0:
             load_data_from_jsonl("data/users.jsonl", User)
 
-    # /recommend_tracks = GroupReccomendations(users_ids).get()
-    # /update_recommendations = UpdateGroupReccomendations(playlist_id).get()
-    # /test = GroupReccomendations(data).test_create_recommendations()
 
     return app
 

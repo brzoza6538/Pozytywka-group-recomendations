@@ -1,3 +1,3 @@
 class Config:
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///example.db'  # Ensure instance/ is writable
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///example.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
