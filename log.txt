@@ -1,0 +1,44 @@
+recommendation-1  |  * Serving Flask app 'recommendation_service'
+recommendation-1  |  * Debug mode: off
+recommendation-1  | [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+recommendation-1  |  * Running on all addresses (0.0.0.0)
+recommendation-1  |  * Running on http://127.0.0.1:8001
+recommendation-1  |  * Running on http://172.18.0.3:8001
+recommendation-1  | [33mPress CTRL+C to quit[0m
+recommendation-1  | 
+recommendation-1  | ---
+recommendation-1  | Generated : 100
+recommendation-1  | Test sample size : 300
+recommendation-1  | Found duplicates : 30
+recommendation-1  | accuracy : 0.3
+recommendation-1  | Time taken : 17.381463
+recommendation-1  | method : create_recommendations_advanced
+recommendation-1  | timeframe_start : 360
+recommendation-1  | timeframe_end : 180
+recommendation-1  | users_favourite_tracks_amount : 300
+recommendation-1  | cluster_recommendation : 10
+recommendation-1  | taste_groups : 30
+recommendation-1  | liked_weight : 5
+recommendation-1  | skipped_weight : -3
+recommendation-1  | started_weight : 3
+recommendation-1  | score_normalisation_upper_limit : 1
+recommendation-1  | score_normalisation_lower_limit : -1
+recommendation-1  | 
+recommendation-1  | ---
+recommendation-1  | Generated : 100
+recommendation-1  | Test sample size : 300
+recommendation-1  | Found duplicates : 38
+recommendation-1  | accuracy : 0.38
+recommendation-1  | Time taken : 15.536531
+recommendation-1  | method : create_recommendations_basic
+recommendation-1  | timeframe_start : 360
+recommendation-1  | timeframe_end : 180
+recommendation-1  | users_favourite_tracks_amount : 300
+recommendation-1  | cluster_recommendation : 10
+recommendation-1  | taste_groups : 30
+recommendation-1  | liked_weight : 5
+recommendation-1  | skipped_weight : -3
+recommendation-1  | started_weight : 3
+recommendation-1  | score_normalisation_upper_limit : 1
+recommendation-1  | score_normalisation_lower_limit : -1
+recommendation-1  | 172.18.0.1 - - [19/Jan/2025 05:57:41] "POST /test_recommendations HTTP/1.1" 200 -

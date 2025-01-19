@@ -20,10 +20,10 @@ class GroupReccomendations:
         self._time_window_start = datetime.utcnow() - timedelta(days=180)
         self._time_window_end = datetime.utcnow()
 
-        self._users_favourite_tracks_amount = 50 * len(self.user_ids)
+        self._users_favourite_tracks_amount = 300
         self._cluster_recommendation = 10
         # powinno być zależne od ilości osób czy nie?
-        self._taste_groups = 5 * len(self.user_ids)
+        self._taste_groups = 30
 
         self._liked_weight = 5
         self._skipped_weight = -3

@@ -20,9 +20,9 @@ def test_create_recommendations(rec_class):
                rec_class.create_recommendations_basic]
     time_start_p = [360]
     time_end_p = [180]
-    users_favourite_tracks_amount_p = [50 * len(rec_class.user_ids)]
+    users_favourite_tracks_amount_p = [300]
     cluster_recommendation_p = [10]
-    taste_groups_p = [5 * len(rec_class.user_ids)]
+    taste_groups_p = [30]
 
     liked_weight_p = [5]
     skipped_weight_p = [-3]
@@ -91,19 +91,22 @@ def test_create_recommendations(rec_class):
 
             "method": setup[0].__name__,
 
-            # "timeframe_start": setup[1], 
-            # "timeframe_end": setup[2], 
-            # "users_favourite_tracks_amount": setup[3], 
-            # "cluster_recommendation": setup[4], 
-            # "taste_groups": setup[5],
-            # "liked_weight": setup[6], 
-            # "skipped_weight": setup[7], 
-            # "started_weight": setup[8], 
-            # "score_normalisation_upper_limit": setup[9],
-            # "score_normalisation_lower_limit": setup[10], 
+            "timeframe_start": setup[1], 
+            "timeframe_end": setup[2], 
+            "users_favourite_tracks_amount": setup[3], 
+            "cluster_recommendation": setup[4], 
+            "taste_groups": setup[5],
+            "liked_weight": setup[6], 
+            "skipped_weight": setup[7], 
+            "started_weight": setup[8], 
+            "score_normalisation_upper_limit": setup[9],
+            "score_normalisation_lower_limit": setup[10], 
         }
         results.append(message)
-        print(message, "\n")
+
+        print("\n---")
+        for setting in message.keys():
+            print(f"{setting} : {message[setting]}")
 
     return results
 
@@ -159,8 +162,9 @@ def test_features(rec_class):
             }
 
             results.append(message)
-            print(message, "\n")
-
+            print("\n---")
+            for setting in message.keys():
+                print(f"{setting} : {message[setting]}")
     return results
 
 
@@ -242,7 +246,11 @@ def test_recommendation(update_class, user_ids):
         message = {
             user_id: round(accuracy_counter/len(test_data), 4)
         }
-        print(message, "\n")
+
+        print("\n---")
+        for setting in message.keys():
+            print(f"{setting} : {message[setting]}")
+
         results.append(message)
     return results
 
@@ -314,6 +322,8 @@ def test_tree_accuracy(update_class):
             "normalisation_range_down": setup[5],
         }
 
-        print(message)
+        print("\n---")
+        for setting in message.keys():
+            print(f"{setting} : {message[setting]}")
         results.append(message)
     return results
