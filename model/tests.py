@@ -91,16 +91,16 @@ def test_create_recommendations(rec_class):
 
             "method": setup[0].__name__,
 
-            "timeframe_start": setup[1], 
-            "timeframe_end": setup[2], 
-            "users_favourite_tracks_amount": setup[3], 
-            "cluster_recommendation": setup[4], 
-            "taste_groups": setup[5],
-            "liked_weight": setup[6], 
-            "skipped_weight": setup[7], 
-            "started_weight": setup[8], 
-            "score_normalisation_upper_limit": setup[9],
-            "score_normalisation_lower_limit": setup[10], 
+            # "timeframe_start": setup[1], 
+            # "timeframe_end": setup[2], 
+            # "users_favourite_tracks_amount": setup[3], 
+            # "cluster_recommendation": setup[4], 
+            # "taste_groups": setup[5],
+            # "liked_weight": setup[6], 
+            # "skipped_weight": setup[7], 
+            # "started_weight": setup[8], 
+            # "score_normalisation_upper_limit": setup[9],
+            # "score_normalisation_lower_limit": setup[10], 
         }
         results.append(message)
         print(message, "\n")

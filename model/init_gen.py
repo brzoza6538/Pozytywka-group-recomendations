@@ -226,8 +226,7 @@ class GroupReccomendations:
             # recommend tracks for each individual cluster
             recommendations += self.recommend_tracks_for_cluster(cluster)
 
-        recommendations = random.sample(
-            recommendations, self._final_playlist_length)
+        recommendations = random.sample(recommendations, min(self._final_playlist_length, len(recommendations)))
         # instead of choosing the ones with best predicted weight, just choose random tracks from clusters
         return recommendations
 
