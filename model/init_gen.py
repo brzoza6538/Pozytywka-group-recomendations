@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import requests
-from recommendation_service import (get_tracks_by_ids,
+from requests_to_app import (get_tracks_by_ids,
                                     get_tracks_without_mentioned_by_ids,
                                     get_type_of_tracks)
 from sklearn.cluster import KMeans

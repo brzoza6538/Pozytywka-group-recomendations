@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 from active_gen import enumerate_artist_id
-from recommendation_service import (get_tracks_by_ids,
+from requests_to_app import (get_tracks_by_ids,
                                     get_tracks_without_mentioned_by_ids,
                                     get_type_of_tracks)
 from sklearn.ensemble import RandomForestClassifier
@@ -49,9 +49,7 @@ def test_create_recommendations(rec_class):
             normalisation_range_down_p
         )
     )
-    message = "(timeframe_start, timeframe_end, users_favourite_tracks_amount, cluster_recommendation, taste_groups, liked_weight, skipped_weight, started_weight, score_normalisation_upper_limit, score_normalisation_lower_limit)"
-    results = [message]
-    print(message)
+    results = []
 
     for setup in constraints:
         rec_class._time_window_start = datetime.utcnow() - \
@@ -83,19 +81,29 @@ def test_create_recommendations(rec_class):
         for track in recommendations:
             if track in test_tracks:
                 duplicates += 1
-        message = (
-            f"""
-            \n{setup[0].__name__}
-            {setup[1:]}
-            - Generated: {len(recommendations)}
-            - Test sample size: {len(test_tracks)}
-            - Found duplicates: {duplicates}
-            - Score (duplicates/test tracks): {round(duplicates / len(recommendations), 4)}
-            - Time taken: {(end - start).total_seconds()}
-            """
-        )
+        message = {
+
+            "Generated": len(recommendations),
+            "Test sample size": len(test_tracks),
+            "Found duplicates": duplicates,
+            "accuracy": round(duplicates / len(recommendations), 4),
+            "Time taken": (end - start).total_seconds(),
+
+            "method": setup[0].__name__,
+
+            "timeframe_start": setup[1], 
+            "timeframe_end": setup[2], 
+            "users_favourite_tracks_amount": setup[3], 
+            "cluster_recommendation": setup[4], 
+            "taste_groups": setup[5],
+            "liked_weight": setup[6], 
+            "skipped_weight": setup[7], 
+            "started_weight": setup[8], 
+            "score_normalisation_upper_limit": setup[9],
+            "score_normalisation_lower_limit": setup[10], 
+        }
         results.append(message)
-        print(message)
+        print(message, "\n")
 
     return results
 
@@ -139,19 +147,19 @@ def test_features(rec_class):
             for track in recommendations:
                 if track in test_tracks:
                     duplicates += 1
-            message = (
-                f"""
-                \n{model.__name__}
-                {rec_class._used_features}
-                - Generated: {len(recommendations)}
-                - Test sample size: {len(test_tracks)}
-                - Found duplicates: {duplicates}
-                - Score (duplicates/test tracks): {round(duplicates / len(recommendations), 4)}
-                - Time taken: {(end - start).total_seconds()}
-                """
-            )
+
+            message = {
+                "attributes used": rec_class._used_features,
+                "accuracy": round(duplicates / len(recommendations), 4),
+                "Time taken": (end - start).total_seconds(),
+                "Test sample size": len(test_tracks),
+                "Found duplicates": duplicates,
+                "method": model.__name__,
+
+            }
+
             results.append(message)
-            print(message)
+            print(message, "\n")
 
     return results
 
@@ -161,7 +169,7 @@ def test_clusters(rec_class):
     tracks_ids = rec_class.get_top_tracks()
     tracks_data = get_tracks_by_ids(tracks_ids)
 
-    accuracy = []
+    result = []
     for i in [2, 8, 32, 48, 128]:
         track_clusters = rec_class.cluster_tracks(tracks_data, i)
 
@@ -185,10 +193,14 @@ def test_clusters(rec_class):
         model.fit(X_train, y_train)
 
         y_pred = model.predict(X_test)
-        accuracy.append(accuracy_score(y_test, y_pred))
 
-        print(f"{i} -- {accuracy}")
-    return str(accuracy)
+        message = {
+            "clusters_num": i,
+            "accuracy": accuracy_score(y_test, y_pred)
+        }
+        print(message, "\n")
+        result.append(message)
+    return result
 
 
 def test_recommendation(update_class, user_ids):
@@ -227,9 +239,11 @@ def test_recommendation(update_class, user_ids):
                 accuracy_counter += 1
             else:
                 d_counter += 1
-        print(round(accuracy_counter/len(test_data), 4))
-        results.append(
-            f"{user_id}   {round(accuracy_counter/len(test_data), 4)}")
+        message = {
+            user_id: round(accuracy_counter/len(test_data), 4)
+        }
+        print(message, "\n")
+        results.append(message)
     return results
 
 
@@ -284,6 +298,22 @@ def test_tree_accuracy(update_class):
 
             for track in tracks_data:
                 diff.append(abs(prediction[track] - test_data.get(track, 0)))
-        results.append(
-            f"min :  {round(np.min(diff), 3)} max : {round(np.max(diff), 3)} ddelt : {round(np.mean(diff), 3)} \nsetup : {setup}")
+
+
+        
+        message = {
+            "min": round(np.min(diff), 3),
+            "max": round(np.max(diff), 3),
+            "avr_diff": round(np.mean(diff), 3),
+
+            "liked_weight": setup[0],
+            "skipped_weight": setup[1],
+            "started_weight": setup[2],
+
+            "normalisation_range_up": setup[4],
+            "normalisation_range_down": setup[5],
+        }
+
+        print(message)
+        results.append(message)
     return results

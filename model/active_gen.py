@@ -1,9 +1,8 @@
 from sklearn.svm import LinearSVC
 
 import numpy as np
-from datetime import datetime, timedelta
 
-from recommendation_service import get_type_of_tracks, get_tracks_by_ids, get_tracks_without_mentioned_by_ids, get_tracks_and_reactions_for_playlist
+from requests_to_app import get_type_of_tracks, get_tracks_by_ids, get_tracks_without_mentioned_by_ids, get_tracks_and_reactions_for_playlist
 
 
 def enumerate_artist_id(tracks1, tracks2):
@@ -121,8 +120,7 @@ class UpdateGroupReccomendations:
         records = {}
 
         for track_id in set(liked_data.keys()).union(skipped_data.keys()):
-            records[track_id] = (liked_data.get(
-                track_id, 0) - skipped_data.get(track_id, 0))
+            records[track_id] = (liked_data.get(track_id, 0) - skipped_data.get(track_id, 0))
 
         data = get_tracks_by_ids(list(records.keys()))
 
