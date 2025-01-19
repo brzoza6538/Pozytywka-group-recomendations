@@ -4,35 +4,12 @@ from sklearn.cluster import KMeans
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.metrics.pairwise import cosine_similarity
 
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from recommendation_service import get_tracks_by_ids, get_tracks_without_mentioned_by_ids, get_type_of_tracks
 
 import numpy as np
 import itertools
 import requests
 import random
-
-app_url = "http://app:8000"
-
-
-def get_tracks_by_ids(track_ids):
-    tracks = (requests.post(f"{app_url}/track_by_id", json=track_ids)).json()
-    return tracks
-
-
-def get_tracks_without_mentioned_by_ids(track_ids):
-    tracks = (
-        requests.post(f"{app_url}/tracks_without_mentioned_by", json=track_ids)
-    ).json()
-    return tracks
-
-
-def get_type_of_tracks(user_id, event_type, from_time, to_time=datetime.utcnow()):
-    data = [user_id, event_type, from_time.isoformat(), to_time.isoformat()]
-    user_records = (requests.post(f"{app_url}/users_actions_of_type", json=data)).json()
-    return user_records
-
 
 class GroupReccomendations:
     def __init__(self, user_ids):
@@ -178,38 +155,6 @@ class GroupReccomendations:
 
         return result
 
-    def test_clusters(self): 
-        # to chyba nic nie mówi - to wynika z braku danych przy za dużej ilośći klastrów niż czegokolwiek innego
-        tracks_ids = self.get_top_tracks()
-        tracks_data = get_tracks_by_ids(tracks_ids)
-
-        accuracy = []
-        for i in [2, 8, 32, 48, 128]:
-            track_clusters = self.cluster_tracks(tracks_data, i)
-
-            X = []
-            y = []
-
-            for cluster_idx, cluster in enumerate(track_clusters):
-                for track in cluster:
-                    features = self.prepare_features([track], discrete=False)[0]
-                    X.append(features)
-                    y.append(cluster_idx)
-
-            X = np.array(X)
-            y = np.array(y)
-
-            model = RandomForestClassifier(n_estimators=100)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, random_state=42)
-
-            model.fit(X_train, y_train)
-
-            y_pred = model.predict(X_test)
-            accuracy.append(accuracy_score(y_test, y_pred))
-
-            print(f"{i} -- {accuracy}")
-        return str(accuracy)
-
 
     def recommend_tracks_for_cluster(self, tracks_data):
         '''
@@ -260,61 +205,6 @@ class GroupReccomendations:
             score = tree.predict([features])[0]
             predictions[track["track_id"]] = max(0, min(1, score))
         return predictions
-
-
-    def test_tree_accuracy(self):
-        '''
-        TODO - move somewhere else
-
-        used to test accuracy of decision tree based scores
-
-        setup = (liked_weight_p, skipped_weight_p, started_weight_p, depths, normalisation_range_up_p, normalisation_range_down_p ) 
-        '''
-        liked_weight_p = [1, 5]
-        skipped_weight_p = [-5, -10]
-        started_weight_p = [1, 3]
-        depths = [10]
-        normalisation_range_up_p = [1]
-        normalisation_range_down_p = [0]
-      
-        constraints = list(
-            itertools.product(
-                liked_weight_p,
-                skipped_weight_p,
-                started_weight_p,
-                depths,
-                normalisation_range_up_p,
-                normalisation_range_down_p
-            )
-        )
-        results = []
-
-        for setup in constraints:
-            self._liked_weight = setup[0]
-            self._skipped_weight = setup[1]
-            self._started_weight = setup[2]
-
-            self.normalisation_range_up = setup[4]
-            self.normalisation_range_down = setup[5]
-            diff = []
-            for user_id in self.user_ids:
-                train_data = self.get_weighed_tracks(user_id)
-
-                train_data = list(train_data.items())
-
-                train_items, test_items = train_test_split(train_data, test_size=0.2, random_state=42)
-
-                train_data = dict(train_items)
-                test_data = dict(test_items)
-
-                tracks_data = [track_id for track_id in test_data.keys()]
-
-                prediction = self.evaluate_tracks(train_data, test_data, setup[3])
-
-                for track in tracks_data:
-                    diff.append(abs(prediction[track] - test_data.get(track, 0)))
-            results.append(f"min :  {round(np.min(diff), 3)} max : {round(np.max(diff), 3)} ddelt : {round(np.mean(diff), 3)} \nsetup : {setup}")
-        return results
 
 
     def create_recommendations_basic(self):
@@ -370,139 +260,4 @@ class GroupReccomendations:
 
         return recommendations
 
-    def test_create_recommendations(self):
-        """
-        setup = (used_algorithm, time_start, time_end, users_favourite_tracks_amount, cluster_recommendation, taste_groups, liked_weight, skipped_weight, started_weight, normalisation_range_up, normalisation_range_down) 
 
-        """
-        model_p = [self.create_recommendations_advanced, self.create_recommendations_basic]
-        time_start_p = [360]
-        time_end_p = [180]
-        users_favourite_tracks_amount_p = [50 * len(self.user_ids)]
-        cluster_recommendation_p = [10]
-        taste_groups_p = [5 * len(self.user_ids)]
-
-        liked_weight_p = [5]
-        skipped_weight_p = [-3]
-        started_weight_p = [3]
-
-        normalisation_range_up_p = [1]
-        normalisation_range_down_p = [-1]
-
-        self._final_playlist_length = 100
-
-        constraints = list(
-            itertools.product(
-                model_p,
-                time_start_p,
-                time_end_p,
-                users_favourite_tracks_amount_p,
-                cluster_recommendation_p,
-                taste_groups_p,
-
-                liked_weight_p,
-                skipped_weight_p,
-                started_weight_p,
-                normalisation_range_up_p,
-                normalisation_range_down_p
-            )
-        )
-        message = "(timeframe_start, timeframe_end, users_favourite_tracks_amount, cluster_recommendation, taste_groups, liked_weight, skipped_weight, started_weight, score_normalisation_upper_limit, score_normalisation_lower_limit)"
-        results = [message]
-        print(message)
-
-        for setup in constraints:
-            self._time_window_start = datetime.utcnow() - timedelta(days=setup[1])
-            self._time_window_end = datetime.utcnow() - timedelta(days=setup[2])
-
-            self._users_favourite_tracks_amount = setup[3]
-            self._cluster_recommendation = setup[4]
-            self._taste_groups = setup[5]
-
-            self._liked_weight = setup[6]
-            self._skipped_weight = setup[7]
-            self._started_weight = setup[8]
-
-            self.normalisation_range_up = setup[9]
-            self.normalisation_range_down = setup[10]
-
-            start = datetime.utcnow()
-            recommendations = setup[0]()
-            end = datetime.utcnow()
-
-            self._time_window_start = datetime.utcnow() - timedelta(days=setup[2])
-            self._time_window_end = datetime.utcnow()
-            test_tracks = self.get_top_tracks()
-
-            duplicates = 0
-            for track in recommendations:
-                if track in test_tracks:
-                    duplicates += 1
-            message = (
-                f"""
-                \n{setup[0].__name__}
-                {setup[1:]}
-                - Generated: {len(recommendations)}
-                - Test sample size: {len(test_tracks)}
-                - Found duplicates: {duplicates}
-                - Score (duplicates/test tracks): {round(duplicates / len(recommendations), 4)}
-                - Time taken: {(end - start).total_seconds()}
-                """
-            )
-            results.append(message)
-            print(message)
-
-        return results
-
-
-    def test_features(self):
-        """
-            test feature combinations
-        """
-        model_p = [self.create_recommendations_advanced, self.create_recommendations_basic]
-        self._final_playlist_length = 100
-        
-        time_constraint_up = 360
-        time_constraint_down = 180
-
-        features_chosen = ["valence", "acousticness"]
-        filtered_features = [f for f in self._used_features if (f not in features_chosen)]
-
-        results = []
-
-        self._final_playlist_length = 100
-
-        for feature_tested in ([filtered_features] + list(itertools.combinations(filtered_features, len(filtered_features)-1))):
-            self._used_features = feature_tested
-
-            for model in model_p:
-                self._time_window_start = datetime.utcnow() - timedelta(days=time_constraint_up)
-                self._time_window_end = datetime.utcnow() - timedelta(days=time_constraint_down)
-
-                start = datetime.utcnow()
-                recommendations = model()
-                end = datetime.utcnow()
-
-                self._time_window_start = datetime.utcnow() - timedelta(days=time_constraint_down)
-                self._time_window_end = datetime.utcnow()
-                test_tracks = self.get_top_tracks()
-
-                duplicates = 0
-                for track in recommendations:
-                    if track in test_tracks:
-                        duplicates += 1
-                message = (
-                    f"""
-                    \n{model.__name__}
-                    {self._used_features}
-                    - Generated: {len(recommendations)}
-                    - Test sample size: {len(test_tracks)}
-                    - Found duplicates: {duplicates}
-                    - Score (duplicates/test tracks): {round(duplicates / len(recommendations), 4)}
-                    - Time taken: {(end - start).total_seconds()}
-                    """
-                )
-                results.append(message)
-                print(message)
-
-        return results

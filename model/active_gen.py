@@ -4,28 +4,7 @@ import numpy as np
 import requests
 from datetime import datetime, timedelta
 
-app_url = "http://app:8000"
-
-
-def get_type_of_tracks(user_id, event_type, from_time, to_time=datetime.utcnow()):
-    data = [user_id, event_type, from_time.isoformat(), to_time.isoformat()]
-    user_records = (requests.post(f"{app_url}/users_actions_of_type", json=data)).json()
-    return user_records
-
-def get_tracks_by_ids(track_ids):
-    tracks = (requests.post(f"{app_url}/track_by_id", json=track_ids)).json()
-    return tracks
-
-
-def get_tracks_without_mentioned_by_ids(track_ids):
-    tracks = (
-        requests.post(f"{app_url}/tracks_without_mentioned_by", json=track_ids)
-    ).json()
-    return tracks
-
-def get_tracks_and_reactions_for_playlist(playlist_id):
-    tracks = (requests.post(f"{app_url}/tracks_of_playlist", json=playlist_id)).json()
-    return tracks
+from recommendation_service import get_type_of_tracks, get_tracks_by_ids, get_tracks_without_mentioned_by_ids, get_tracks_and_reactions_for_playlist
 
 
 def enumerate_artist_id(tracks1, tracks2):
@@ -150,39 +129,3 @@ class UpdateGroupReccomendations:
             record["reaction"] = (False if records[record["track_id"]] < 0 else True)
 
         return data
-
-    def test_recommendation(self, user_ids):
-        """
-            test algorithm training it on users's history of last year, test based on last 3 months 
-        """
-        time_window_start = datetime.utcnow() - timedelta(days=360)
-        time_window_end = datetime.utcnow()- timedelta(days=90)
-
-        results = []
-        accuracy_counter = 0 
-        d_counter = 0 
-
-        for user_id in user_ids:
-            data = self.get_user_data(user_id, time_window_start, time_window_end) [:30]
-
-            track_ids = {track['track_id'] for track in data}
-            track_ids = list(track_ids)
-            
-            propositions =  self.get_user_data(user_id, time_window_end, datetime.utcnow())
-            propositions = [{key: value for key, value in track.items() if key != "reaction"} for track in propositions]
-
-            propositions, data = enumerate_artist_id(propositions, data)
-            predictions = self.predict(data, propositions)
-
-            test_data = self.get_user_data(user_id, time_window_end, datetime.utcnow())
-            accuracy_counter = 0 
-            d_counter = 0 
-
-            for i in range(len(predictions)):
-                if (predictions[i] == 1 and test_data[i]['reaction'] == True):
-                    accuracy_counter += 1
-                else:
-                    d_counter += 1
-            print(round(accuracy_counter/len(test_data), 4))
-            results.append(f"{user_id}   {round(accuracy_counter/len(test_data), 4)}")
-        return results
