@@ -56,7 +56,7 @@ def worse_recommend():
 @app.route("/update_recommendation", methods=["POST"])
 def update_recommendation():
     playlist_id = request.get_json()
-    track_ids = UpdateGroupReccomendations(playlist_id).get_advanced()
+    track_ids = UpdateGroupReccomendations(playlist_id).get()
     return track_ids
 
 

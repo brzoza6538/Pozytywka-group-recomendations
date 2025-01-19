@@ -42,16 +42,16 @@ class GroupReccomendations:
         self._time_window_start = datetime.utcnow() - timedelta(days=180)
         self._time_window_end = datetime.utcnow()
 
-        self._users_favourite_tracks_amount = 70  * len(self.user_ids)
-        self._cluster_recommendation = 30
+        self._users_favourite_tracks_amount = 50  * len(self.user_ids)
+        self._cluster_recommendation = 10
         self._taste_groups = 5  * len(self.user_ids) # powinno być zależne od ilości osób czy nie?
 
         self._liked_weight = 5
-        self._skipped_weight = -5
-        self._started_weight = 5
+        self._skipped_weight = -3
+        self._started_weight = 3
 
         self.normalisation_range_up = 1
-        self.normalisation_range_down = 0
+        self.normalisation_range_down = -1
 
         self._final_playlist_length = 30
 
@@ -60,10 +60,10 @@ class GroupReccomendations:
              "energy",
              "loudness",
              "speechiness",
-             "acousticness",
+            #  "acousticness",
              "instrumentalness",
              "liveness",
-             "valence",
+            #  "valence",
              "tempo"
             ]
 
@@ -131,7 +131,7 @@ class GroupReccomendations:
             started_tracks[track_id] = self.normalisation_range_down + (self.normalisation_range_up - self.normalisation_range_down) * (1 / (1 + np.exp(-record)))
         return started_tracks
 
-    def get_top_tracks(self):
+    def get_top_tracks(self, limit=True):
         '''
         get best regarded songs of users
         '''
@@ -149,7 +149,10 @@ class GroupReccomendations:
         sorted_items = sorted(
             connected_scores.items(), key=lambda item: item[1], reverse=True
         )
-        top_tracks = [track_id for track_id, score in sorted_items[: self._users_favourite_tracks_amount]]
+        if limit:
+            top_tracks = [track_id for track_id, score in sorted_items[: self._users_favourite_tracks_amount]]
+        else:
+            top_tracks = [track_id for track_id, score in sorted_items]
 
 
         return top_tracks
@@ -216,7 +219,7 @@ class GroupReccomendations:
 
         #not enough data to use the whole database
         # propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
-        propositions_pool = get_tracks_by_ids(self.get_top_tracks())
+        propositions_pool = get_tracks_by_ids(self.get_top_tracks(limit=False))
 
         liked_tracks_features = self.prepare_features(tracks_data)
         propositions_features = self.prepare_features(propositions_pool)
@@ -375,16 +378,16 @@ class GroupReccomendations:
         model_p = [self.create_recommendations_advanced, self.create_recommendations_basic]
         time_start_p = [360]
         time_end_p = [180]
-        users_favourite_tracks_amount_p = [70]
-        cluster_recommendation_p = [30]
-        taste_groups_p = [5]
+        users_favourite_tracks_amount_p = [50 * len(self.user_ids)]
+        cluster_recommendation_p = [10]
+        taste_groups_p = [5 * len(self.user_ids)]
 
-        liked_weight_p = [5, 1]
-        skipped_weight_p = [-5, -1]
-        started_weight_p = [5, 4, 1]
+        liked_weight_p = [5]
+        skipped_weight_p = [-3]
+        started_weight_p = [3]
 
         normalisation_range_up_p = [1]
-        normalisation_range_down_p = [0]
+        normalisation_range_down_p = [-1]
 
         self._final_playlist_length = 100
 
@@ -404,15 +407,17 @@ class GroupReccomendations:
                 normalisation_range_down_p
             )
         )
-        results = []
+        message = "(timeframe_start, timeframe_end, users_favourite_tracks_amount, cluster_recommendation, taste_groups, liked_weight, skipped_weight, started_weight, score_normalisation_upper_limit, score_normalisation_lower_limit)"
+        results = [message]
+        print(message)
 
         for setup in constraints:
             self._time_window_start = datetime.utcnow() - timedelta(days=setup[1])
             self._time_window_end = datetime.utcnow() - timedelta(days=setup[2])
 
-            self._users_favourite_tracks_amount = setup[3] * len(self.user_ids)
+            self._users_favourite_tracks_amount = setup[3]
             self._cluster_recommendation = setup[4]
-            self._taste_groups = setup[5] * len(self.user_ids)
+            self._taste_groups = setup[5]
 
             self._liked_weight = setup[6]
             self._skipped_weight = setup[7]
@@ -449,6 +454,7 @@ class GroupReccomendations:
 
         return results
 
+
     def test_features(self):
         """
             test feature combinations
@@ -459,14 +465,14 @@ class GroupReccomendations:
         time_constraint_up = 360
         time_constraint_down = 180
 
-        features_chosen = []
+        features_chosen = ["valence", "acousticness"]
         filtered_features = [f for f in self._used_features if (f not in features_chosen)]
 
         results = []
 
         self._final_playlist_length = 100
 
-        for feature_tested in ([filtered_features] + list(itertools.permutations(filtered_features, len(filtered_features)-1))):
+        for feature_tested in ([filtered_features] + list(itertools.combinations(filtered_features, len(filtered_features)-1))):
             self._used_features = feature_tested
 
             for model in model_p:
