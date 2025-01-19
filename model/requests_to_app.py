@@ -1,5 +1,6 @@
-import requests
 from datetime import datetime
+
+import requests
 
 app_url = "http://app:8000"
 

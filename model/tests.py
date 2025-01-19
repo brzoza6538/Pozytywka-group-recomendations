@@ -3,9 +3,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 from active_gen import enumerate_artist_id
-from requests_to_app import (get_tracks_by_ids,
-                                    get_tracks_without_mentioned_by_ids,
-                                    get_type_of_tracks)
+from requests_to_app import get_tracks_by_ids
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split

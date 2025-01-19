@@ -1,12 +1,9 @@
-import itertools
 import random
 from datetime import datetime, timedelta
 
 import numpy as np
-import requests
 from requests_to_app import (get_tracks_by_ids,
-                                    get_tracks_without_mentioned_by_ids,
-                                    get_type_of_tracks)
+                             get_type_of_tracks)
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.tree import DecisionTreeRegressor
@@ -161,9 +158,9 @@ class GroupReccomendations:
         '''
         recommend tracks for each individual cluster based on how "close" they are to the average of a group
         '''
-        liked_tracks_ids = [track["track_id"] for track in tracks_data]
 
-        # not enough data to use the whole database
+        # possibly not enough data to use the whole database        
+        # liked_tracks_ids = [track["track_id"] for track in tracks_data]
         # propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
         propositions_pool = get_tracks_by_ids(self.get_top_tracks(limit=False))
 

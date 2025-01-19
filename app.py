@@ -3,7 +3,6 @@ import os
 
 import requests
 from flask import Flask
-from sqlalchemy.exc import IntegrityError
 
 from app_routes import app_blueprint
 from models import Artist, Session, Track, User, db

@@ -2,7 +2,8 @@
 from active_gen import UpdateGroupReccomendations
 from flask import Flask, request
 from init_gen import GroupReccomendations
-from tests import test_clusters, test_create_recommendations, test_features, test_recommendation, test_tree_accuracy
+from tests import (test_clusters, test_create_recommendations, test_features,
+                   test_recommendation, test_tree_accuracy)
 
 app = Flask(__name__)
 

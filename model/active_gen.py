@@ -1,8 +1,9 @@
-from sklearn.svm import LinearSVC
-
 import numpy as np
-
-from requests_to_app import get_type_of_tracks, get_tracks_by_ids, get_tracks_without_mentioned_by_ids, get_tracks_and_reactions_for_playlist
+from requests_to_app import (get_tracks_and_reactions_for_playlist,
+                             get_tracks_by_ids,
+                             get_tracks_without_mentioned_by_ids,
+                             get_type_of_tracks)
+from sklearn.svm import LinearSVC
 
 
 def enumerate_artist_id(tracks1, tracks2):

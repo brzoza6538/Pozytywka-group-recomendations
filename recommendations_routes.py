@@ -1,7 +1,9 @@
-from flask import Blueprint, request
-import requests
-from models import db, Recommendation
 import uuid
+
+import requests
+from flask import Blueprint, request
+
+from models import Recommendation, db
 
 recommendation_url = "http://recommendation:8001/"
 
