@@ -1,15 +1,16 @@
+import itertools
+import random
 from datetime import datetime, timedelta
 
-from sklearn.cluster import KMeans
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.metrics.pairwise import cosine_similarity
-
-from recommendation_service import get_tracks_by_ids, get_tracks_without_mentioned_by_ids, get_type_of_tracks
-
 import numpy as np
-import itertools
 import requests
-import random
+from recommendation_service import (get_tracks_by_ids,
+                                    get_tracks_without_mentioned_by_ids,
+                                    get_type_of_tracks)
+from sklearn.cluster import KMeans
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.tree import DecisionTreeRegressor
+
 
 class GroupReccomendations:
     def __init__(self, user_ids):
@@ -19,9 +20,10 @@ class GroupReccomendations:
         self._time_window_start = datetime.utcnow() - timedelta(days=180)
         self._time_window_end = datetime.utcnow()
 
-        self._users_favourite_tracks_amount = 50  * len(self.user_ids)
+        self._users_favourite_tracks_amount = 50 * len(self.user_ids)
         self._cluster_recommendation = 10
-        self._taste_groups = 5  * len(self.user_ids) # powinno być zależne od ilości osób czy nie?
+        # powinno być zależne od ilości osób czy nie?
+        self._taste_groups = 5 * len(self.user_ids)
 
         self._liked_weight = 5
         self._skipped_weight = -3
@@ -34,15 +36,15 @@ class GroupReccomendations:
 
         self._used_features = [
             "danceability",
-             "energy",
-             "loudness",
-             "speechiness",
+            "energy",
+            "loudness",
+            "speechiness",
             #  "acousticness",
-             "instrumentalness",
-             "liveness",
+            "instrumentalness",
+            "liveness",
             #  "valence",
-             "tempo"
-            ]
+            "tempo"
+        ]
 
         self.recommendations = []
 
@@ -67,7 +69,6 @@ class GroupReccomendations:
                 feature_vector.append(track["artist_id"])
             features.append(feature_vector)
         return np.array(features)
-
 
     def encode_artist_ids(self, tracks_data):
         '''
@@ -105,7 +106,8 @@ class GroupReccomendations:
                 + liked_tracks.get(track_id, 0) * self._liked_weight
             )
 
-            started_tracks[track_id] = self.normalisation_range_down + (self.normalisation_range_up - self.normalisation_range_down) * (1 / (1 + np.exp(-record)))
+            started_tracks[track_id] = self.normalisation_range_down + (
+                self.normalisation_range_up - self.normalisation_range_down) * (1 / (1 + np.exp(-record)))
         return started_tracks
 
     def get_top_tracks(self, limit=True):
@@ -127,10 +129,10 @@ class GroupReccomendations:
             connected_scores.items(), key=lambda item: item[1], reverse=True
         )
         if limit:
-            top_tracks = [track_id for track_id, score in sorted_items[: self._users_favourite_tracks_amount]]
+            top_tracks = [track_id for track_id,
+                          score in sorted_items[: self._users_favourite_tracks_amount]]
         else:
             top_tracks = [track_id for track_id, score in sorted_items]
-
 
         return top_tracks
 
@@ -155,14 +157,13 @@ class GroupReccomendations:
 
         return result
 
-
     def recommend_tracks_for_cluster(self, tracks_data):
         '''
         recommend tracks for each individual cluster based on how "close" they are to the average of a group
         '''
         liked_tracks_ids = [track["track_id"] for track in tracks_data]
 
-        #not enough data to use the whole database
+        # not enough data to use the whole database
         # propositions_pool = get_tracks_without_mentioned_by_ids(liked_tracks_ids)
         propositions_pool = get_tracks_by_ids(self.get_top_tracks(limit=False))
 
@@ -171,7 +172,8 @@ class GroupReccomendations:
 
         average_features = np.mean(liked_tracks_features, axis=0)
 
-        similarities = cosine_similarity(propositions_features, [average_features])
+        similarities = cosine_similarity(
+            propositions_features, [average_features])
 
         propositions_with_similarity = [
             (track, similarity[0])
@@ -206,7 +208,6 @@ class GroupReccomendations:
             predictions[track["track_id"]] = max(0, min(1, score))
         return predictions
 
-
     def create_recommendations_basic(self):
         '''
         main method creating  tracks for class using basic version
@@ -222,12 +223,13 @@ class GroupReccomendations:
         recommendations = []
 
         for cluster in track_clusters:
-            recommendations += self.recommend_tracks_for_cluster(cluster)  # recommend tracks for each individual cluster
+            # recommend tracks for each individual cluster
+            recommendations += self.recommend_tracks_for_cluster(cluster)
 
-        recommendations = random.sample(recommendations, self._final_playlist_length)
-        #instead of choosing the ones with best predicted weight, just choose random tracks from clusters
+        recommendations = random.sample(
+            recommendations, self._final_playlist_length)
+        # instead of choosing the ones with best predicted weight, just choose random tracks from clusters
         return recommendations
-
 
     def create_recommendations_advanced(self):
         '''
@@ -244,7 +246,8 @@ class GroupReccomendations:
         recommendations = []
 
         for cluster in track_clusters:
-            recommendations += self.recommend_tracks_for_cluster(cluster)  # recommend tracks for each individual cluster
+            # recommend tracks for each individual cluster
+            recommendations += self.recommend_tracks_for_cluster(cluster)
 
         data = {}
         for user_id in self.user_ids:
@@ -256,8 +259,7 @@ class GroupReccomendations:
                 for key in data | predictions
             }  # predict score of each recommended track for each user using decision tree
 
-        recommendations = sorted(data, key=data.get, reverse=True)[: self._final_playlist_length]
+        recommendations = sorted(data, key=data.get, reverse=True)[
+            : self._final_playlist_length]
 
         return recommendations
-
-

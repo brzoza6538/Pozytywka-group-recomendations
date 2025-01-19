@@ -1,12 +1,13 @@
-from flask import Flask
-import os
 import json
-from models import db, User, Artist, Session, Track
-from app_routes import app_blueprint
-from recommendations_routes import recommendations_blueprint
-from sqlalchemy.exc import IntegrityError
+import os
 
 import requests
+from flask import Flask
+from sqlalchemy.exc import IntegrityError
+
+from app_routes import app_blueprint
+from models import Artist, Session, Track, User, db
+from recommendations_routes import recommendations_blueprint
 
 recommendation_url = "http://recommendation:8001/"
 
@@ -17,6 +18,7 @@ def clear_database():
     db.session.query(Session).delete()
     db.session.query(Track).delete()
     db.session.commit()
+
 
 def load_data_from_jsonl(file_path, dataType):
     if os.path.exists(file_path):
@@ -31,7 +33,6 @@ def load_data_from_jsonl(file_path, dataType):
         db.session.commit()
     else:
         raise Exception(f"{file_path} : file not found")
-
 
 
 def call_random_microservice():
@@ -61,7 +62,6 @@ def create_app():
             load_data_from_jsonl("data/tracks.jsonl", Track)
         if User.query.count() == 0:
             load_data_from_jsonl("data/users.jsonl", User)
-
 
     return app
 

@@ -1,10 +1,12 @@
-from sklearn.svm import LinearSVC
+from datetime import datetime, timedelta
 
 import numpy as np
 import requests
-from datetime import datetime, timedelta
-
-from recommendation_service import get_type_of_tracks, get_tracks_by_ids, get_tracks_without_mentioned_by_ids, get_tracks_and_reactions_for_playlist
+from recommendation_service import (get_tracks_and_reactions_for_playlist,
+                                    get_tracks_by_ids,
+                                    get_tracks_without_mentioned_by_ids,
+                                    get_type_of_tracks)
+from sklearn.svm import LinearSVC
 
 
 def enumerate_artist_id(tracks1, tracks2):
@@ -24,7 +26,7 @@ def enumerate_artist_id(tracks1, tracks2):
         }
         for track in tracks1
     ]
-    
+
     updated_tracks2 = [
         {
             **track,
@@ -34,7 +36,6 @@ def enumerate_artist_id(tracks1, tracks2):
     ]
 
     return updated_tracks1, updated_tracks2
-
 
 
 class UpdateGroupReccomendations:
@@ -114,18 +115,22 @@ class UpdateGroupReccomendations:
         ]
 
         return recommended_tracks[: self._batch_size]
-    
+
     def get_user_data(self, user_id, time_window_start, time_window_end):
-        liked_data = get_type_of_tracks(user_id, "like", time_window_start, time_window_end)
-        skipped_data = get_type_of_tracks(user_id, "skip", time_window_start, time_window_end)
+        liked_data = get_type_of_tracks(
+            user_id, "like", time_window_start, time_window_end)
+        skipped_data = get_type_of_tracks(
+            user_id, "skip", time_window_start, time_window_end)
         records = {}
 
         for track_id in set(liked_data.keys()).union(skipped_data.keys()):
-            records[track_id] = (liked_data.get(track_id, 0) - skipped_data.get(track_id, 0))
+            records[track_id] = (liked_data.get(
+                track_id, 0) - skipped_data.get(track_id, 0))
 
         data = get_tracks_by_ids(list(records.keys()))
 
         for record in data:
-            record["reaction"] = (False if records[record["track_id"]] < 0 else True)
+            record["reaction"] = (
+                False if records[record["track_id"]] < 0 else True)
 
         return data

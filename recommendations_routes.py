@@ -1,7 +1,9 @@
-from flask import Blueprint, jsonify, request
-import requests
-from models import db, Recommendation
 import uuid
+
+import requests
+from flask import Blueprint, jsonify, request
+
+from models import Recommendation, db
 
 recommendation_url = "http://recommendation:8001/"
 
@@ -18,7 +20,8 @@ def create_recommendation():
 
     playlist_id = str(uuid.uuid4())[:22]
     for track in track_ids:
-        new_recommendation = Recommendation(playlist_id=playlist_id, track_id=track)
+        new_recommendation = Recommendation(
+            playlist_id=playlist_id, track_id=track)
         db.session.add(new_recommendation)
     db.session.commit()
 
@@ -38,7 +41,8 @@ def update_recommendations():
     db.session.commit()
 
     track_ids = (
-        requests.post(f"{recommendation_url}/update_recommendation", json=playlist_id)
+        requests.post(
+            f"{recommendation_url}/update_recommendation", json=playlist_id)
     ).json()
 
     for track in track_ids:
@@ -46,10 +50,10 @@ def update_recommendations():
             playlist_id=playlist_id, track_id=track
         ).first()
         if not existing_recommendation:
-            new_recommendation = Recommendation(playlist_id=playlist_id, track_id=track)
+            new_recommendation = Recommendation(
+                playlist_id=playlist_id, track_id=track)
             db.session.add(new_recommendation)
 
     db.session.commit()
 
     return str(playlist_id), 201
-
