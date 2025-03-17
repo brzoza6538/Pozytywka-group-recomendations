@@ -8,7 +8,7 @@
 <body>
     <h1>Recommendation Form</h1>
     <form id="recommendation-form">
-        <label for="recommendation">Enter your recommendation:</label>
+        <label for="recommendation">Enter group's user IDs as an array [ID_1, ID_2]:</label>
         <input type="text" id="recommendation" name="recommendation" required>
         <button type="submit">Submit</button>
     </form>
@@ -18,42 +18,28 @@
 
     <script>
         document.getElementById("recommendation-form").addEventListener("submit", async function(event) {
-            event.preventDefault(); // Prevent default form submission
+            event.preventDefault();
 
             const recommendationString = document.getElementById("recommendation").value;
 
             try {
-                // Parse the recommendation string to JSON
                 const recommendationData = JSON.parse(recommendationString);
-
-                // Send POST request to /recommend
                 const postResponse = await fetch('/recommend', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(recommendationData),
                 });
 
-                if (!postResponse.ok) {
-                    throw new Error("Failed to create recommendation.");
-                }
+                if (!postResponse.ok) throw new Error("Failed to create recommendation.");
+                let playlist_id = await postResponse.text();
 
-                // Parse the playlist_id from the response (text response)
-                playlist_id = await postResponse.text();
-
-                // Fetch recommendations using the playlist_id
                 const getResponse = await fetch(`/recommend/${playlist_id}`);
-                if (!getResponse.ok) {
-                    throw new Error("Failed to fetch recommendations.");
-                }
-
+                if (!getResponse.ok) throw new Error("Failed to fetch recommendations.");
                 const recommendations = await getResponse.json();
 
-                // Display recommendations with checkboxes
                 const outputDiv = document.getElementById("recommendations-output");
                 outputDiv.innerHTML = `
-                    <h2>Recommendations:</h2>
+                    <h2>Recommendations: \n (Choose songs your group would like to add to playlist)</h2>
                     <form id="recommendations-list">
                         ${recommendations.map((r, index) => `
                             <div>
@@ -65,57 +51,37 @@
                     </form>
                 `;
 
-                // Add event listener for the submit button
                 document.getElementById("submit-selected").addEventListener("click", async function() {
                     const selectedRecommendations = [];
-                    const checkboxes = document.querySelectorAll('#recommendations-list input[type="checkbox"]');
-
-                    checkboxes.forEach(checkbox => {
-                        // Get the recommendation_id and whether it's checked
-                        selectedRecommendations.push({
-                            recommendation_id: checkbox.value,
-                            checked: checkbox.checked
+                    document.querySelectorAll('#recommendations-list input[type="checkbox"]')
+                        .forEach(checkbox => {
+                            selectedRecommendations.push({
+                                recommendation_id: checkbox.value,
+                                checked: checkbox.checked
+                            });
                         });
-                    });
 
-                    // Print out the data being sent in PATCH request to console
-                    console.log("Data sent to PATCH:", {
-                        playlist_id: playlist_id,  // Include playlist_id here
-                        selectedRecommendations: selectedRecommendations
-                    });
-
-                    // Send PATCH request to /adapt with playlist_id
                     try {
                         const patchResponse = await fetch('/adapt', {
                             method: 'PATCH',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                playlist_id: playlist_id,  // Include playlist_id here
+                                playlist_id: playlist_id,
                                 selectedRecommendations: selectedRecommendations
                             }),
                         });
 
-                        if (!patchResponse.ok) {
-                            throw new Error("Failed to update recommendations.");
-                        }
-
-                        // After PATCH, get the updated playlist_id from the response
+                        if (!patchResponse.ok) throw new Error("Failed to update recommendations.");
                         playlist_id = await patchResponse.text();
 
-                        // Fetch the updated recommendations using the playlist_id after PATCH
                         const getResponse = await fetch(`/recommend/${playlist_id}`);
-                        if (!getResponse.ok) {
-                            throw new Error("Failed to fetch updated recommendations.");
-                        }
-
+                        if (!getResponse.ok) throw new Error("Failed to fetch updated recommendations.");
                         const updatedRecommendations = await getResponse.json();
 
-                        // Display the updated recommendations using the PATCH response
                         const updatedOutputDiv = document.getElementById("recommendations-output");
-                        updatedOutputDiv.innerHTML = ` 
-                            <h2>Updated Recommendations:</h2>
+                        updatedOutputDiv.innerHTML = `
+                            <h2>Updated Recommendations: \n (Choose songs your group would like to add to playlist)</h2>
+                            <a href="${window.location.origin}/recommended_playlist/${playlist_id}" target="_blank">click here to see your playlist</a>
                             <form id="recommendations-list">
                                 ${updatedRecommendations.map((r, index) => `
                                     <div>
@@ -127,13 +93,11 @@
                             </form>
                         `;
 
-                        // Re-add the event listener to handle future clicks
                         document.getElementById("submit-selected").addEventListener("click", arguments.callee);
                     } catch (error) {
                         document.getElementById("response-message").textContent = `Error: ${error.message}`;
                     }
                 });
-
             } catch (error) {
                 document.getElementById("response-message").textContent = `Error: ${error.message}`;
             }
