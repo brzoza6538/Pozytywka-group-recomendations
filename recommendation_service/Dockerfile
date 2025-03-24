@@ -11,3 +11,4 @@ EXPOSE 8001
 
 CMD ["python", "-u", "recommendation_service.py"]
 # CMD ["ls", "-al", "./"]
+# CMD ["python", "-m", "unittest", "discover", "tests"]
