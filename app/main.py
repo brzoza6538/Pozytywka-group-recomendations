@@ -4,9 +4,9 @@ import os
 import requests
 from flask import Flask
 
-from app_routes import app_blueprint
+from app.routes.app_routes import app_blueprint
 from models import Artist, Session, Track, User, db
-from recommendations_routes import recommendations_blueprint
+from app.routes.recommendations_routes import recommendations_blueprint
 
 recommendation_url = "http://recommendation:8001/"
 

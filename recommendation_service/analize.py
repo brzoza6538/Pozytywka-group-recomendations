@@ -9,11 +9,11 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
 
-def test_create_recommendations(rec_class):
+def check_create_recommendations(rec_class):
     """
     test different parameters and methods of GroupReccomendations
-
     """
+    
     model_p = [rec_class.create_recommendations_advanced,
                rec_class.create_recommendations_basic]
     time_start_p = [360]
@@ -73,16 +73,16 @@ def test_create_recommendations(rec_class):
         rec_class._time_window_start = datetime.utcnow() - \
             timedelta(days=setup[2])
         rec_class._time_window_end = datetime.utcnow()
-        test_tracks = rec_class.get_top_tracks()
+        check_tracks = rec_class.get_top_tracks()
 
         duplicates = 0
         for track in recommendations:
-            if track in test_tracks:
+            if track in check_tracks:
                 duplicates += 1
         message = {
 
             "Generated": len(recommendations),
-            "Test sample size": len(test_tracks),
+            "Test sample size": len(check_tracks),
             "Found duplicates": duplicates,
             "accuracy": round(duplicates / len(recommendations), 4),
             "Time taken": (end - start).total_seconds(),
@@ -109,7 +109,7 @@ def test_create_recommendations(rec_class):
     return results
 
 
-def test_features(rec_class):
+def check_features(rec_class):
     """
         test feature combinations
     """
@@ -142,18 +142,18 @@ def test_features(rec_class):
             rec_class._time_window_start = datetime.utcnow(
             ) - timedelta(days=time_constraint_down)
             rec_class._time_window_end = datetime.utcnow()
-            test_tracks = rec_class.get_top_tracks()
+            check_tracks = rec_class.get_top_tracks()
 
             duplicates = 0
             for track in recommendations:
-                if track in test_tracks:
+                if track in check_tracks:
                     duplicates += 1
 
             message = {
                 "attributes used": rec_class._used_features,
                 "accuracy": round(duplicates / len(recommendations), 4),
                 "Time taken": (end - start).total_seconds(),
-                "Test sample size": len(test_tracks),
+                "Test sample size": len(check_tracks),
                 "Found duplicates": duplicates,
                 "method": model.__name__,
 
@@ -166,7 +166,7 @@ def test_features(rec_class):
     return results
 
 
-def test_clusters(rec_class):
+def check_clusters(rec_class):
     # to chyba nic nie mówi - to wynika z braku danych przy za dużej ilośći klastrów niż czegokolwiek innego
     tracks_ids = rec_class.get_top_tracks()
     tracks_data = get_tracks_by_ids(tracks_ids)
@@ -190,7 +190,7 @@ def test_clusters(rec_class):
 
         model = RandomForestClassifier(n_estimators=100)
         X_train, X_test, y_train, y_test = train_test_split(
-            X, y, test_size=0.5, random_state=42)
+            X, y, check_size=0.5, random_state=42)
 
         model.fit(X_train, y_train)
 
@@ -205,7 +205,7 @@ def test_clusters(rec_class):
     return result
 
 
-def test_recommendation(update_class, user_ids):
+def check_recommendation(update_class, user_ids):
     """
         test algorithm training it on users's history of last year, test based on last 3 months 
     """
@@ -231,18 +231,18 @@ def test_recommendation(update_class, user_ids):
         propositions, data = enumerate_artist_id(propositions, data)
         predictions = update_class.predict(data, propositions)
 
-        test_data = update_class.get_user_data(
+        check_data = update_class.get_user_data(
             user_id, time_window_end, datetime.utcnow())
         accuracy_counter = 0
         d_counter = 0
 
         for i in range(len(predictions)):
-            if (predictions[i] == 1 and test_data[i]['reaction'] == True):
+            if (predictions[i] == 1 and check_data[i]['reaction'] == True):
                 accuracy_counter += 1
             else:
                 d_counter += 1
         message = {
-            user_id: round(accuracy_counter/len(test_data), 4)
+            user_id: round(accuracy_counter/len(check_data), 4)
         }
 
         print("\n---")
@@ -253,7 +253,7 @@ def test_recommendation(update_class, user_ids):
     return results
 
 
-def test_tree_accuracy(update_class):
+def check_tree_accuracy(update_class):
     '''
     used to test accuracy of decision tree based scores
 
@@ -291,19 +291,19 @@ def test_tree_accuracy(update_class):
 
             train_data = list(train_data.items())
 
-            train_items, test_items = train_test_split(
-                train_data, test_size=0.2, random_state=42)
+            train_items, check_items = train_test_split(
+                train_data, check_size=0.2, random_state=42)
 
             train_data = dict(train_items)
-            test_data = dict(test_items)
+            check_data = dict(check_items)
 
-            tracks_data = [track_id for track_id in test_data.keys()]
+            tracks_data = [track_id for track_id in check_data.keys()]
 
             prediction = update_class.evaluate_tracks(
-                train_data, test_data, setup[3])
+                train_data, check_data, setup[3])
 
             for track in tracks_data:
-                diff.append(abs(prediction[track] - test_data.get(track, 0)))
+                diff.append(abs(prediction[track] - check_data.get(track, 0)))
 
 
         

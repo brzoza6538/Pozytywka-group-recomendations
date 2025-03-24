@@ -2,50 +2,51 @@
 from active_gen import UpdateGroupReccomendations
 from flask import Flask, request
 from init_gen import GroupReccomendations
-from tests import (test_clusters, test_create_recommendations, test_features,
-                   test_recommendation, test_tree_accuracy)
+
+from analize import (check_clusters, check_create_recommendations, check_features,
+                   check_recommendation, check_tree_accuracy)
 
 app = Flask(__name__)
 
 
 
-@app.route("/test_recommendations", methods=["POST"])
+@app.route("/check_recommendations", methods=["POST"])
 def check_recommendations():
     user_ids = request.get_json()
     model = GroupReccomendations(user_ids)
-    response = test_create_recommendations(model)
+    response = check_create_recommendations(model)
     return response
 
 
-@app.route("/test_clusters", methods=["POST"])
-def test_clustering():
+@app.route("/check_clusters", methods=["POST"])
+def check_clustering():
     user_ids = request.get_json()
     model = GroupReccomendations(user_ids)
-    response = test_clusters(model)
+    response = check_clusters(model)
     return response
 
 
-@app.route("/test_tree", methods=["POST"])
-def test_tree():
+@app.route("/check_tree", methods=["POST"])
+def check_tree():
     user_ids = request.get_json()
     model = GroupReccomendations(user_ids)
-    response = test_tree_accuracy(model)
+    response = check_tree_accuracy(model)
     return response
 
 
-@app.route("/test_update", methods=["POST"])
-def test_update_accuracy():
+@app.route("/check_update", methods=["POST"])
+def check_update_accuracy():
     user_ids = request.get_json()
     model = UpdateGroupReccomendations("mock_playlist_id")
-    response = test_recommendation(model, user_ids)
+    response = check_recommendation(model, user_ids)
     return response
 
 
-@app.route("/test_features", methods=["POST"])
-def test_features_used():
+@app.route("/check_features", methods=["POST"])
+def check_features_used():
     user_ids = request.get_json()
     model = GroupReccomendations(user_ids)
-    response = test_features(model)
+    response = check_features(model)
     return response
 
 
