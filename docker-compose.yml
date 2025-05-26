@@ -1,5 +1,7 @@
 services:
   app:
+    depends_on:
+      - recommendation
     build: 
       context: ./app
       dockerfile: Dockerfile
@@ -21,4 +23,24 @@ services:
       - ./recommendation_service:/app
     environment:
       - FLASK_APP=recommendation_service.py
+      - FLASK_ENV=development
+
+  selenium:
+    image: seleniarm/standalone-chromium:latest
+    ports:
+      - "4444:4444"
+
+  testing:
+    depends_on:
+      - app
+      - selenium
+    build:
+      context: ./robot_tests
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    # volumes:
+      # - ./robot_tests:/app
+    environment:
+      - FLASK_APP=first_page_tests.robot
       - FLASK_ENV=development
